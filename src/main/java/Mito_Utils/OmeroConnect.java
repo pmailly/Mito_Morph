@@ -12,7 +12,18 @@ import static Mito_Utils.JDialogOmeroConnect.serverPort;
 import static Mito_Utils.JDialogOmeroConnect.userID;
 import static Mito_Utils.JDialogOmeroConnect.userPass;
 import ij.IJ;
-import ij.measure.ResultsTable;
+import ij.ImagePlus;
+import ij.Prefs;
+import ij.gui.Roi;
+import ij.gui.Line;
+import ij.gui.OvalRoi;
+import ij.gui.Overlay;
+import ij.gui.PointRoi;
+import ij.gui.PolygonRoi;
+import ij.gui.ShapeRoi;
+import ij.gui.TextRoi;
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.geom.Point2D;
 import loci.formats.in.DefaultMetadataOptions;
 import loci.formats.in.MetadataLevel;
@@ -50,12 +61,13 @@ import omero.model.*;
 import omero.model.enums.ChecksumAlgorithmSHA1160;
 import omero.model.enums.UnitsLength;
 import omero.sys.ParametersI;
-
+import java.awt.Polygon;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import loci.plugins.in.ImporterOptions;
 
 // encrypt
 
@@ -532,35 +544,65 @@ public class OmeroConnect {
         Collection<ROIData> roiDatas = roifac.saveROIs(securityContext, image.getId(), Arrays.asList(data));
     }
     
-    /*
+    
+    /**
     Retrieve image rois
+     * @param image
+     * @return roiList
+     * @throws java.util.concurrent.ExecutionException
+     * @throws omero.gateway.exception.DSOutOfServiceException
+     * @throws omero.gateway.exception.DSAccessException
     */
     
     public static List<Roi> getImageRois (ImageData image) throws ExecutionException, DSOutOfServiceException, DSAccessException {
-        
+        List<Roi> roiList = new ArrayList<>();
         ROIFacility roifac = gateway.getFacility(ROIFacility.class);
         //Retrieve the roi linked to an image
-        List<ROIResult> roiresults = roifac.loadROIs(securityContext, image.getId());
-        ROIResult r = roiresults.iterator().next();
-        if (r == null) 
-            return null;
-        Collection<ROIData> rois = r.getROIs();
-        List<ShapeData> list;
-        Iterator<ROIData> j = rois.iterator();
-        while (j.hasNext()) {
-          list = j.next().getShapes();
-          if (list == null) {
-                System.out.println(" NO ROI");
-                return null;
-            }
-            // Do something
-            for (ShapeData shapeData : list) {
-              String roiString = shapeData.getROICoordinate().toString();
-                System.out.println(roiString);
+        List<ROIResult> rois_result = roifac.loadROIs(securityContext, image.getId());
+        Roi roi = null;
+        for (ROIResult rois : rois_result) {
+            for (ROIData r : rois.getROIs()) {
+                for (ShapeData s : r.getShapes()) {
+                    long id = s.getId();
+                    int time = s.getT();
+                    int z = s.getZ();
+                    if (s instanceof RectangleData) {
+                        RectangleData rectData = (RectangleData) s;
+                        roi = new Roi(rectData.getX(), rectData.getY(), rectData.getWidth(), rectData.getHeight());
+                    }
+                    if (s instanceof EllipseData) {
+                        EllipseData ellipse = (EllipseData) s;
+                        roi = new OvalRoi(ellipse.getX(), ellipse.getY(), ellipse.getRadiusX(), ellipse.getRadiusY());
+                    }
+                    if (s instanceof PointData) {
+                        PointData pt = (PointData) s;
+                        roi = new PointRoi(pt.getX(), pt.getY());
+                    }
+                    if (s instanceof LineData) {
+                        LineData lineData = (LineData) s;
+                        roi = new Line(lineData.getX1(), lineData.getY1(), lineData.getX2(), lineData.getY2());
+                    }
+                    if (s instanceof MaskData) {
+                        MaskData maskData = (MaskData) s;
+                        roi = new Roi(maskData.getX(), maskData.getY(), maskData.getWidth(), maskData.getHeight());
+                        
+                    }
+                    if (s instanceof PolygonData) {
+                        PolygonData polyData = (PolygonData) s;
+                        List<Point2D.Double> points = polyData.getPoints();
+                        Polygon poly = new Polygon();
+                        for (Point2D.Double pt : points) {
+                            poly.addPoint((int)Math.round(pt.getX()), (int)Math.round(pt.getY()));
+                        }
+                        roi = new PolygonRoi(poly, Roi.POLYGON);
+                    }
+                }
+                roiList.add((Roi)roi);
             }
         }
-        return(null);
+        return(roiList);
     }
+    
     
     public List<RectangleData> getRectangleROIS(ImageData image) throws Exception {
         DataManagerFacility dm = gateway.getFacility(DataManagerFacility.class);
