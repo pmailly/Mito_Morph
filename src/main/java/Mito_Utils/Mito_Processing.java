@@ -372,8 +372,8 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
     * @param nuc nucleus number 
     * @param mitoPop mito population
     * @param mitoParams branch number, branch lenght, end points, junctions
-     * @param imgName
-    * @param results buffer
+     * @param rootName
+     * @param table
     * @throws java.io.IOException
     **/
     public static void computeMitoParameters(int nuc, Objects3DPopulation mitoPop, double[] mitoParams, 
