@@ -1180,12 +1180,12 @@ public class OmeroConnect {
         link = (ImageAnnotationLink) dm.saveAndReturnObject(securityContext, link);
     }
 
-    public void addFileAnnotation(ImageData image, File file) throws ExecutionException, DSAccessException, DSOutOfServiceException {
-        addFileAnnotation(image, file, "attached");
+    public void addFileAnnotation(ImageData image, File file, String fileType) throws ExecutionException, DSAccessException, DSOutOfServiceException {
+        addFileAnnotation(image, file, fileType, "attached");
     }
 
 
-    public static void addFileAnnotation(ImageData image, File file, String comment) throws ExecutionException, DSAccessException, DSOutOfServiceException {
+    public static void addFileAnnotation(ImageData image, File file, String fileType, String comment) throws ExecutionException, DSAccessException, DSOutOfServiceException {
         DataManagerFacility dm = gateway.getFacility(DataManagerFacility.class);
         // checking if annotation exists
         FileAnnotationData fileAnnotationData = getFileAnnotation(image, file.getName(), null);
@@ -1194,7 +1194,7 @@ public class OmeroConnect {
             dm.delete(securityContext, fileAnnotationData.asIObject());
         }
         IJ.log("Attaching " + file.getAbsolutePath() + " to " + image.getName());
-        Future<FileAnnotationData> annotationData = dm.attachFile(securityContext, file, "application/octet-stream", comment, null, image);
+        Future<FileAnnotationData> annotationData = dm.attachFile(securityContext, file, fileType, comment, null, image);
     }
 
     // TODO check and update
