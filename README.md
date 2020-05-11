@@ -1,1 +1,2 @@
-Compute pml nuclear bodies in DAPI stained nucleus.
+Analyze mitochondrial network
+Work on local and Omero images
