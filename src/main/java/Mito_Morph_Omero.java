@@ -36,18 +36,14 @@ import ij.measure.ResultsTable;
 import ij.plugin.RGBStackMerge;
 import java.io.BufferedWriter;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import ome.model.units.BigResult;
 import omero.gateway.exception.DSAccessException;
 import omero.gateway.exception.DSOutOfServiceException;
 import omero.gateway.facility.MetadataFacility;
-import omero.gateway.facility.TablesFacility;
 import omero.gateway.model.ChannelData;
 import omero.gateway.model.ImageData;
 import omero.gateway.model.PixelsData;
-import omero.gateway.model.TableData;
-import omero.gateway.model.TableDataColumn;
 
 
 public class Mito_Morph_Omero implements PlugIn {
@@ -170,7 +166,7 @@ public class Mito_Morph_Omero implements PlugIn {
                 // add table to dataset
                 File resultsFile = new File(tempDir+"results.xls");
                 results.save(tempDir+"results.xls");
-                addFileAnnotation(firstImage, resultsFile, "results");
+                addFileAnnotation(firstImage, resultsFile, "text/csv", "Results");
             }
             OmeroConnect.disconnect();
             IJ.showStatus("Process done");
