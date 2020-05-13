@@ -43,8 +43,11 @@ import static Mito_Utils.Mito_Processing.threshold;
 import Mito_Utils.JDialogOmeroConnect;
 import static Mito_Utils.JDialogOmeroConnect.dialogCancel;
 import static Mito_Utils.JDialogOmeroConnect.imagesFolder;
+import static Mito_Utils.Mito_Processing.clearOutSide;
 import static Mito_Utils.Mito_Processing.writeHeaders;
+import ij.gui.Roi;
 import ij.plugin.RGBStackMerge;
+import ij.plugin.frame.RoiManager;
 import java.awt.Frame;
 import java.util.Arrays;
 import loci.plugins.BF;
@@ -190,6 +193,16 @@ public class Mito_Morph_Local implements PlugIn {
                         median_filter(imgMitoOrg, 1.5);
                         IJ.run(imgMitoOrg, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
                         threshold(imgMitoOrg, AutoThresholder.Method.RenyiEntropy, false, false);
+                        
+                        // find mito only inside roi if exist roi file
+                        String roiFile = inDir + File.separator+rootName + ".roi";
+                        if (new File(roiFile).exists()) {
+                            // find rois
+                            RoiManager rm = new RoiManager(false);
+                            rm.runCommand("Open", roiFile);
+                            Roi roi = rm.getRoi(1);
+                            clearOutSide(imgMitoOrg, roi);
+                        }
 
                         Objects3DPopulation mitoPop = getPopFromImage(imgMitoOrg, cal);
                         //objectsSizeFilter(minMito, maxMito, mitoPop, imgMitoOrg, false); 
