@@ -80,12 +80,6 @@ public class Mito_Morph_Local implements PlugIn {
         final boolean canceled = false;
         
         try {
-            if (canceled) {
-                IJ.showMessage(" Pluging canceled");
-                return;
-            }
-            JDialogOmeroConnect dialog = new JDialogOmeroConnect(new Frame(), true);
-            dialog.show();
             if (dialogCancel){
                 IJ.showStatus(" Pluging canceled");
                 return;

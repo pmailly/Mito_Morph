@@ -19,8 +19,6 @@ import java.awt.Font;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import mcib3d.geom.Object3D;
 import mcib3d.geom.Objects3DPopulation;
@@ -31,7 +29,6 @@ import mcib3d.image3d.ImageLabeller;
 import mcib3d.image3d.distanceMap3d.EDT;
 import mcib3d.image3d.processing.FastFilters3D;
 import mcib3d.image3d.regionGrowing.Watershed3D;
-import omero.gateway.model.TableDataColumn;
 import sc.fiji.analyzeSkeleton.AnalyzeSkeleton_;
 import sc.fiji.analyzeSkeleton.SkeletonResult;
         
@@ -49,7 +46,7 @@ public class Mito_Processing {
    
     // Max distance to track object
     public static double maxDist = 5;
-    public static boolean watershed = false; 
+    public static boolean watershed = true; 
     
  /**
  * 
@@ -139,6 +136,7 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
         flush_close(img);
         return(cellPop);
     }
+    
     
     /**
      * Size filter objects

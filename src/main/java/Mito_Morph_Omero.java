@@ -25,17 +25,20 @@ import static Mito_Utils.Mito_Processing.threshold;
 import static Mito_Utils.JDialogOmeroConnect.imageData;
 import static Mito_Utils.JDialogOmeroConnect.selectedDataset;
 import static Mito_Utils.JDialogOmeroConnect.selectedProject;
+import static Mito_Utils.Mito_Processing.clearOutSide;
 import Mito_Utils.OmeroConnect;
 import static Mito_Utils.OmeroConnect.addFileAnnotation;
 import static Mito_Utils.OmeroConnect.gateway;
 import static Mito_Utils.OmeroConnect.getImageZ;
 import static Mito_Utils.OmeroConnect.getResolutionImage;
 import static Mito_Utils.OmeroConnect.securityContext;
+import ij.gui.Roi;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.RGBStackMerge;
 import java.io.BufferedWriter;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import ome.model.units.BigResult;
 import omero.gateway.exception.DSAccessException;
@@ -118,6 +121,12 @@ public class Mito_Morph_Omero implements PlugIn {
                         median_filter(imgMitoOrg, 1.5);
                         IJ.run(imgMitoOrg, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
                         threshold(imgMitoOrg, AutoThresholder.Method.RenyiEntropy, false, false);
+                        
+                        // find if roi exist and clearoutside
+                        List<Roi> rois = Mito_Utils.OmeroConnect.getImageRois(image);
+                        if (!rois.isEmpty()) {
+                            clearOutSide(imgMitoOrg, rois.get(0));
+                        }
                         
                         Objects3DPopulation mitoPop = getPopFromImage(imgMitoOrg, cal);
                         //objectsSizeFilter(minMito, maxMito, mitoPop, imgMitoOrg, false);

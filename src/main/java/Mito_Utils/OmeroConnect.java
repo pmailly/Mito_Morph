@@ -12,18 +12,11 @@ import static Mito_Utils.JDialogOmeroConnect.serverPort;
 import static Mito_Utils.JDialogOmeroConnect.userID;
 import static Mito_Utils.JDialogOmeroConnect.userPass;
 import ij.IJ;
-import ij.ImagePlus;
-import ij.Prefs;
 import ij.gui.Roi;
 import ij.gui.Line;
 import ij.gui.OvalRoi;
-import ij.gui.Overlay;
 import ij.gui.PointRoi;
 import ij.gui.PolygonRoi;
-import ij.gui.ShapeRoi;
-import ij.gui.TextRoi;
-import java.awt.Color;
-import java.awt.Font;
 import java.awt.geom.Point2D;
 import loci.formats.in.DefaultMetadataOptions;
 import loci.formats.in.MetadataLevel;
@@ -67,7 +60,6 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import loci.plugins.in.ImporterOptions;
 
 // encrypt
 

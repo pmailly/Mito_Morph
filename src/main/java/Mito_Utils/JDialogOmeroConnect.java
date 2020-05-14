@@ -9,9 +9,11 @@ import static Mito_Utils.OmeroConnect.connect;
 import static Mito_Utils.OmeroConnect.gateway;
 import static Mito_Utils.OmeroConnect.getUserId;
 import ij.IJ;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JFileChooser;
 import omero.gateway.model.ProjectData;
 import omero.gateway.model.DatasetData;
 import omero.gateway.model.ExperimenterData;
@@ -100,7 +102,9 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
         jScrollPane1 = new javax.swing.JScrollPane();
         jTextAreaImages = new javax.swing.JTextArea();
         jPanelLocal = new javax.swing.JPanel();
-        jFileChooser = new javax.swing.JFileChooser();
+        jLabelImagesFolder = new javax.swing.JLabel();
+        jTextFieldImagesFolder = new javax.swing.JTextField();
+        jButtonBrowse = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
         setTitle("Images selection");
@@ -312,11 +316,12 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
 
         jTabbedOmero.addTab("Images on Omero server", jPanelOmero);
 
-        jFileChooser.setCurrentDirectory(new java.io.File("/home/phm/~"));
-        jFileChooser.setFileSelectionMode(javax.swing.JFileChooser.DIRECTORIES_ONLY);
-        jFileChooser.addActionListener(new java.awt.event.ActionListener() {
+        jLabelImagesFolder.setText("Images folder : ");
+
+        jButtonBrowse.setText("Browse");
+        jButtonBrowse.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jFileChooserActionPerformed(evt);
+                jButtonBrowseActionPerformed(evt);
             }
         });
 
@@ -325,15 +330,26 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
         jPanelLocalLayout.setHorizontalGroup(
             jPanelLocalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanelLocalLayout.createSequentialGroup()
-                .addGap(20, 20, 20)
-                .addComponent(jFileChooser, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(24, 24, 24)
+                .addComponent(jLabelImagesFolder)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jTextFieldImagesFolder, javax.swing.GroupLayout.PREFERRED_SIZE, 304, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(160, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanelLocalLayout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jButtonBrowse)
+                .addGap(62, 62, 62))
         );
         jPanelLocalLayout.setVerticalGroup(
             jPanelLocalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanelLocalLayout.createSequentialGroup()
-                .addGap(0, 44, Short.MAX_VALUE)
-                .addComponent(jFileChooser, javax.swing.GroupLayout.PREFERRED_SIZE, 413, javax.swing.GroupLayout.PREFERRED_SIZE))
+            .addGroup(jPanelLocalLayout.createSequentialGroup()
+                .addGap(51, 51, 51)
+                .addGroup(jPanelLocalLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabelImagesFolder)
+                    .addComponent(jTextFieldImagesFolder, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addComponent(jButtonBrowse)
+                .addContainerGap(334, Short.MAX_VALUE))
         );
 
         jTabbedOmero.addTab("Images on local machine", jPanelLocal);
@@ -370,7 +386,6 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
 
     private void jButtonOkActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonOkActionPerformed
         this.dispose();
-        dialogCancel = false;
     }//GEN-LAST:event_jButtonOkActionPerformed
 
     private void jButtonCancelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonCancelActionPerformed
@@ -379,13 +394,6 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
             OmeroConnect.disconnect();
         dialogCancel = true;
     }//GEN-LAST:event_jButtonCancelActionPerformed
-
-    private void jFileChooserActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jFileChooserActionPerformed
-        // TODO add your handling code here:
-        localImages = true;
-        imagesFolder = jFileChooser.getSelectedFile().getAbsolutePath();
-        jButtonOk.setEnabled(true);
-    }//GEN-LAST:event_jFileChooserActionPerformed
 
     private void jComboBoxDatasetsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBoxDatasetsActionPerformed
         // TODO add your handling code here:
@@ -401,7 +409,7 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
                     IJ.showStatus(imageData.size() + " images found in datatset " + selectedDataset);
                     jTextAreaImages.setText("");
                     for(ImageData images : imageData)
-                    jTextAreaImages.append(images.getName()+"\n");
+                        jTextAreaImages.append(images.getName()+"\n");
                     jButtonOk.setEnabled(true);
                 }
             }
@@ -457,7 +465,7 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
                 try {
                     projects = OmeroConnect.findUserProjects(getUserId(userID));
                     if (projects.isEmpty())
-                    IJ.showMessage("Error", "No project found for user " + userID);
+                        IJ.showMessage("Error", "No project found for user " + userID);
                     else {
                         if (jComboBoxProjects.getItemCount() > 0)
                         jComboBoxProjects.removeAllItems();
@@ -530,6 +538,20 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
             jButtonConnect.setEnabled(true);
     }//GEN-LAST:event_jPasswordFieldFocusLost
 
+    private void jButtonBrowseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonBrowseActionPerformed
+        // TODO add your handling code here:
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setCurrentDirectory(new File("~/"));
+        fileChooser.setDialogTitle("Choose image directory");
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            jTextFieldImagesFolder.setText(fileChooser.getSelectedFile().getAbsolutePath());
+            localImages = true;
+            imagesFolder = fileChooser.getSelectedFile().getAbsolutePath();
+            jButtonOk.setEnabled(true);
+        }
+    }//GEN-LAST:event_jButtonBrowseActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -569,12 +591,12 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.ButtonGroup buttonGroup2;
+    private javax.swing.JButton jButtonBrowse;
     private javax.swing.JButton jButtonCancel;
     private javax.swing.JButton jButtonConnect;
     private javax.swing.JButton jButtonOk;
     private javax.swing.JComboBox<String> jComboBoxDatasets;
     private javax.swing.JComboBox<String> jComboBoxProjects;
-    private javax.swing.JFileChooser jFileChooser;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
@@ -583,6 +605,7 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabelImagesFolder;
     private javax.swing.JPanel jPanelLocal;
     private javax.swing.JPanel jPanelOmero;
     private javax.swing.JPasswordField jPasswordField;
@@ -590,6 +613,7 @@ public class JDialogOmeroConnect extends javax.swing.JDialog {
     private javax.swing.JSeparator jSeparator1;
     private javax.swing.JTabbedPane jTabbedOmero;
     private javax.swing.JTextArea jTextAreaImages;
+    private javax.swing.JTextField jTextFieldImagesFolder;
     private javax.swing.JTextField jTextFieldPort;
     private javax.swing.JTextField jTextFieldServerName;
     private javax.swing.JTextField jTextFieldUserID;
