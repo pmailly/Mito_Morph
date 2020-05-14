@@ -167,49 +167,53 @@ public class Mito_Morph_Local implements PlugIn {
                             IJ.showMessage("No roi found, taking the whole image");
                             rois[0] = new Roi(0, 0, reader.getSizeX(), reader.getSizeY());
                         }
+                        /*
+                        * Open channels
+                        */
+                        
+                        // DAPI
+                        int dapiCh = 1;                        
+                        options.setCBegin(s, dapiCh);
+                        options.setCEnd(s, dapiCh);
+                        System.out.println("-- Series : "+ seriesName);
+                        System.out.println("Opening Nucleus channel");
+                        ImagePlus imgNucOrg= BF.openImagePlus(options)[0]; 
+
+                        // mito channel
+                        int mitoCh = 0;
+                        System.out.println("Opening mito channel");
+                        options.setCBegin(s, mitoCh);
+                        options.setCEnd(s, mitoCh);
+                        ImagePlus imgMitoOrg = BF.openImagePlus(options)[0];
                         
                         // for each roi
                         
                         for( int r = 0; r < rois.length; r++) {
                             Roi roi = rois[r];
-                            /*
-                            * Open DAPI channel
-                            */
-                            int dapiCh = 1;                        
-                            options.setCBegin(s, dapiCh);
-                            options.setCEnd(s, dapiCh);
-                            System.out.println("-- Series : "+ seriesName);
-                            System.out.println("Opening Nucleus channel");
-                            ImagePlus imgNuc= BF.openImagePlus(options)[0];
-
+                            
+                            // Find nucleus
                             Objects3DPopulation nucPop = new Objects3DPopulation();
+                            imgNucOrg.setRoi(roi);
+                            ImagePlus imgNuc = imgNucOrg.duplicate();
                             nucPop = find_nucleus2(imgNuc, roi);
                             int totalNucPop = nucPop.getNbObjects();
-                            System.out.println("Detected nucleus = "+totalNucPop);
-
-                            flush_close(imgNuc);
-
-                            // Open mito channel
-                            int mitoCh = 0;
-                            System.out.println("Opening mito channel");
-                            options.setCBegin(s, mitoCh);
-                            options.setCEnd(s, mitoCh);
-                            ImagePlus imgMitoOrg = BF.openImagePlus(options)[0];
+                            System.out.println("Roi " + (r+1)+" Detected nucleus = "+totalNucPop);
 
                             // Find mitos
+                            imgMitoOrg.setRoi(roi);
+                            ImagePlus imgMito = imgMitoOrg.duplicate();
+                            median_filter(imgMito, 1.5);
+                            IJ.run(imgMito, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
+                            threshold(imgMito, AutoThresholder.Method.RenyiEntropy, false, false);
+                            clearOutSide(imgMito, roi);
 
-                            median_filter(imgMitoOrg, 1.5);
-                            IJ.run(imgMitoOrg, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
-                            threshold(imgMitoOrg, AutoThresholder.Method.RenyiEntropy, false, false);
-                            clearOutSide(imgMitoOrg, roi);
-
-                            Objects3DPopulation mitoPop = getPopFromImage(imgMitoOrg, cal);
+                            Objects3DPopulation mitoPop = getPopFromImage(imgMito, cal);
                             //objectsSizeFilter(minMito, maxMito, mitoPop, imgMitoOrg, false); 
                             System.out.println("Mito pop = "+ mitoPop.getNbObjects());
 
                             // Find mito network morphology
                             // Skeletonize
-                            double[] skeletonParams = analyzeSkeleton(imgMitoOrg, outDirResults+rootName);
+                            double[] skeletonParams = analyzeSkeleton(imgMito, outDirResults+rootName);
 
 
                             // Compute global Mito parameters                        
@@ -218,7 +222,7 @@ public class Mito_Morph_Local implements PlugIn {
                             computeMitoParameters(nucPop.getNbObjects(), mitoPop, skeletonParams, (r+1), rootName+seriesName+"_Mito", outPutGlobalResults);
 
                             // Save objects image
-                            ImageHandler imhMitoObjects = ImageHandler.wrap(imgMitoOrg).createSameDimensions();
+                            ImageHandler imhMitoObjects = ImageHandler.wrap(imgMito).createSameDimensions();
                             ImageHandler imhNucObjects = imhMitoObjects.duplicate();
                             mitoPop.draw(imhMitoObjects, 255);
                             nucPop.draw(imhNucObjects, 255);
@@ -232,9 +236,11 @@ public class Mito_Morph_Local implements PlugIn {
                             flush_close(imhMitoObjects.getImagePlus());
                             flush_close(imhNucObjects.getImagePlus());
                             flush_close(imgNuc);
-                            flush_close(imgMitoOrg);
+                            flush_close(imgMito);
                             options.setSeriesOn(s, false);
                         }
+                        flush_close(imgNucOrg);
+                        flush_close(imgMitoOrg);
                     }
                 }
             }

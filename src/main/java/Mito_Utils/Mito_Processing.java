@@ -120,8 +120,7 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
         }
         ImagePlus imgStack = new ImagePlus("Nucleus", stack);
         imgStack.setCalibration(imgNuc.getCalibration());
-        if (roi != null)
-            clearOutSide(imgStack, roi);
+        clearOutSide(imgStack, roi);
 
         Objects3DPopulation cellPop = new Objects3DPopulation();
         if (watershed) {
