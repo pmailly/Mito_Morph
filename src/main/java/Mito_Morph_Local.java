@@ -47,6 +47,7 @@ import static Mito_Utils.Mito_Processing.writeHeaders;
 import ij.gui.Roi;
 import ij.plugin.RGBStackMerge;
 import ij.plugin.frame.RoiManager;
+import java.util.ArrayList;
 import java.util.Arrays;
 import loci.plugins.BF;
 import loci.plugins.in.ImporterOptions;
@@ -154,19 +155,21 @@ public class Mito_Morph_Local implements PlugIn {
                             roiFile = inDir + File.separator+rootName + ".roi";
                         else if (new File(inDir + File.separator+rootName + ".zip").exists())
                             roiFile = inDir + File.separator+rootName + ".zip";
-                        Roi[] rois = null;
+                        ArrayList<Roi> rois = new ArrayList<>();
                         if (!"".equals(roiFile)) {
                             // find rois
                             System.out.println("Find roi " + new File(roiFile).getName());
                             RoiManager rm = new RoiManager(false);
                             rm.runCommand("Open", roiFile);
-                            rois = rm.getRoisAsArray();
+                            for (Roi roi : rm.getRoisAsArray()) 
+                                rois.add(roi);
                         }
                         else {
                             //take the whole image
-                            IJ.showMessage("No roi found, taking the whole image");
-                            rois[0] = new Roi(0, 0, reader.getSizeX(), reader.getSizeY());
+                            System.out.println("No roi found, taking the whole image");
+                            rois.add(0, new Roi(0, 0, reader.getSizeX(), reader.getSizeY()));
                         }
+                        
                         /*
                         * Open channels
                         */
@@ -188,8 +191,8 @@ public class Mito_Morph_Local implements PlugIn {
                         
                         // for each roi
                         
-                        for( int r = 0; r < rois.length; r++) {
-                            Roi roi = rois[r];
+                        for( int r = 0; r < rois.size(); r++) {
+                            Roi roi = rois.get(r);
                             
                             // Find nucleus
                             Objects3DPopulation nucPop = new Objects3DPopulation();
