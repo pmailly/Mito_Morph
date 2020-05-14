@@ -155,9 +155,10 @@ public class Mito_Morph_Local implements PlugIn {
                         Roi roi = null;
                         if (new File(roiFile).exists()) {
                             // find rois
+                            System.out.println("Find roi " + roiFile);
                             RoiManager rm = new RoiManager(false);
                             rm.runCommand("Open", roiFile);
-                            roi = rm.getRoi(1);
+                            roi = rm.getRoi(0);
                         }
 
                         /*
