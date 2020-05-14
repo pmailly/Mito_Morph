@@ -87,6 +87,10 @@ public class Mito_Morph_Omero implements PlugIn {
                             cal.pixelDepth = res[2];
                         }
                         
+                        // find if roi exist and clearoutside
+
+                        List<Roi> rois = Mito_Utils.OmeroConnect.getImageRois(image);
+                        
                         /*
                          * Open DAPI channel ch1
                          */
@@ -95,7 +99,11 @@ public class Mito_Morph_Omero implements PlugIn {
                         ImagePlus imgNuc = getImageZ(image, 1, 1, 0, sizeZ).getImagePlus();
                         
                         Objects3DPopulation nucPop = new Objects3DPopulation();
-                        nucPop = find_nucleus2(imgNuc);
+                        if (!rois.isEmpty())
+                            nucPop = find_nucleus2(imgNuc, rois.get(0));
+                        else
+                            nucPop = find_nucleus2(imgNuc, null);
+                        
                         int totalNucPop = nucPop.getNbObjects();
                         System.out.println("Detected nucleus = "+totalNucPop);
                         
@@ -121,12 +129,10 @@ public class Mito_Morph_Omero implements PlugIn {
                         median_filter(imgMitoOrg, 1.5);
                         IJ.run(imgMitoOrg, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
                         threshold(imgMitoOrg, AutoThresholder.Method.RenyiEntropy, false, false);
-                        
-                        // find if roi exist and clearoutside
-                        List<Roi> rois = Mito_Utils.OmeroConnect.getImageRois(image);
-                        if (!rois.isEmpty()) {
+                                                
+                        if (!rois.isEmpty())
                             clearOutSide(imgMitoOrg, rois.get(0));
-                        }
+                        
                         
                         Objects3DPopulation mitoPop = getPopFromImage(imgMitoOrg, cal);
                         //objectsSizeFilter(minMito, maxMito, mitoPop, imgMitoOrg, false);
