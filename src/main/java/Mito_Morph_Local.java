@@ -40,7 +40,6 @@ import static Mito_Utils.Mito_Processing.flush_close;
 import static Mito_Utils.Mito_Processing.median_filter;
 import static Mito_Utils.Mito_Processing.randomColorPop;
 import static Mito_Utils.Mito_Processing.threshold;
-import Mito_Utils.JDialogOmeroConnect;
 import static Mito_Utils.JDialogOmeroConnect.dialogCancel;
 import static Mito_Utils.JDialogOmeroConnect.imagesFolder;
 import static Mito_Utils.Mito_Processing.clearOutSide;
@@ -48,7 +47,6 @@ import static Mito_Utils.Mito_Processing.writeHeaders;
 import ij.gui.Roi;
 import ij.plugin.RGBStackMerge;
 import ij.plugin.frame.RoiManager;
-import java.awt.Frame;
 import java.util.Arrays;
 import loci.plugins.BF;
 import loci.plugins.in.ImporterOptions;
@@ -133,7 +131,7 @@ public class Mito_Morph_Local implements PlugIn {
                         */
                         // Global file for mito results
                         String resultsName = "GlobalResults.xls";
-                        String header = "ImageName\tNucleus number\tMito number\tMito Volume\tMito branch number\tMito branch length\t"
+                        String header = "ImageName\tRoi\tNucleus number\tMito number\tMito Volume\tMito branch number\tMito branch length\t"
                                 + "Mito end points\tMito junction number\n";
                         outPutGlobalResults = writeHeaders(outDirResults+resultsName, header); 
                     }
@@ -151,89 +149,91 @@ public class Mito_Morph_Local implements PlugIn {
                         options.setSeriesOn(s, true);
                         
                         // find mito only inside roi if exist roi file
-                        String roiFile = inDir + File.separator+rootName + ".roi";
-                        Roi roi = null;
-                        if (new File(roiFile).exists()) {
+                        String roiFile = "";
+                        if (new File(inDir + File.separator+rootName + ".roi").exists())
+                            roiFile = inDir + File.separator+rootName + ".roi";
+                        else if (new File(inDir + File.separator+rootName + ".zip").exists())
+                            roiFile = inDir + File.separator+rootName + ".zip";
+                        Roi[] rois = null;
+                        if (!"".equals(roiFile)) {
                             // find rois
-                            System.out.println("Find roi " + roiFile);
+                            System.out.println("Find roi " + new File(roiFile).getName());
                             RoiManager rm = new RoiManager(false);
                             rm.runCommand("Open", roiFile);
-                            roi = rm.getRoi(0);
+                            rois = rm.getRoisAsArray();
                         }
-
-                        /*
-                        * Open DAPI channel
-                        */
-                        int dapiCh = 1;                        
-                        options.setCBegin(s, dapiCh);
-                        options.setCEnd(s, dapiCh);
-                        System.out.println("-- Series : "+ seriesName);
-                        System.out.println("Opening Nucleus channel");
-                        ImagePlus imgNuc= BF.openImagePlus(options)[0];
-
-                        Objects3DPopulation nucPop = new Objects3DPopulation();
-                        nucPop = find_nucleus2(imgNuc, roi);
-                        int totalNucPop = nucPop.getNbObjects();
-                        System.out.println("Detected nucleus = "+totalNucPop);
-
-                        // tags nucleus
-                        ImageHandler imhNuc = ImageInt.wrap(imgNuc).createSameDimensions();
-                        randomColorPop(nucPop, imhNuc, true);
-                        // save image for nucleus population
-                        imhNuc.getImagePlus().setCalibration(cal);
-                        FileSaver ImgNucFile = new FileSaver(imhNuc.getImagePlus());
-                        ImgNucFile.saveAsTiff(outDirResults + rootName + "_" + seriesName + "_Nucleus_Objects.tif");
-                        imhNuc.closeImagePlus();
-                        flush_close(imgNuc);
-
-                        // Open mito channel
-                        int mitoCh = 0;
-                        System.out.println("Opening mito channel");
-                        options.setCBegin(s, mitoCh);
-                        options.setCEnd(s, mitoCh);
-                        ImagePlus imgMitoOrg = BF.openImagePlus(options)[0];
-
-                        // Find mitos
-
-                        median_filter(imgMitoOrg, 1.5);
-                        IJ.run(imgMitoOrg, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
-                        threshold(imgMitoOrg, AutoThresholder.Method.RenyiEntropy, false, false);
+                        else {
+                            IJ.showMessage("No roi found");
+                            return;
+                        }
                         
-                        if (roi != null)
+                        // for each roi
+                        
+                        for( int r = 0; r < rois.length; r++) {
+                            Roi roi = rois[r];
+                            /*
+                            * Open DAPI channel
+                            */
+                            int dapiCh = 1;                        
+                            options.setCBegin(s, dapiCh);
+                            options.setCEnd(s, dapiCh);
+                            System.out.println("-- Series : "+ seriesName);
+                            System.out.println("Opening Nucleus channel");
+                            ImagePlus imgNuc= BF.openImagePlus(options)[0];
+
+                            Objects3DPopulation nucPop = new Objects3DPopulation();
+                            nucPop = find_nucleus2(imgNuc, roi);
+                            int totalNucPop = nucPop.getNbObjects();
+                            System.out.println("Detected nucleus = "+totalNucPop);
+
+                            flush_close(imgNuc);
+
+                            // Open mito channel
+                            int mitoCh = 0;
+                            System.out.println("Opening mito channel");
+                            options.setCBegin(s, mitoCh);
+                            options.setCEnd(s, mitoCh);
+                            ImagePlus imgMitoOrg = BF.openImagePlus(options)[0];
+
+                            // Find mitos
+
+                            median_filter(imgMitoOrg, 1.5);
+                            IJ.run(imgMitoOrg, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
+                            threshold(imgMitoOrg, AutoThresholder.Method.RenyiEntropy, false, false);
                             clearOutSide(imgMitoOrg, roi);
 
+                            Objects3DPopulation mitoPop = getPopFromImage(imgMitoOrg, cal);
+                            //objectsSizeFilter(minMito, maxMito, mitoPop, imgMitoOrg, false); 
+                            System.out.println("Mito pop = "+ mitoPop.getNbObjects());
 
-                        Objects3DPopulation mitoPop = getPopFromImage(imgMitoOrg, cal);
-                        //objectsSizeFilter(minMito, maxMito, mitoPop, imgMitoOrg, false); 
-                        System.out.println("Mito pop = "+ mitoPop.getNbObjects());
-
-                        // Find mito network morphology
-                        // Skeletonize
-                        double[] skeletonParams = analyzeSkeleton(imgMitoOrg, outDirResults+rootName);
+                            // Find mito network morphology
+                            // Skeletonize
+                            double[] skeletonParams = analyzeSkeleton(imgMitoOrg, outDirResults+rootName);
 
 
-                        // Compute global Mito parameters                        
-                        // nb of mito, mean mito volume, skeleton parameters
-                        IJ.showStatus("Writing parameters ...");
-                        computeMitoParameters(nucPop.getNbObjects(), mitoPop, skeletonParams, rootName+seriesName+"_Mito", outPutGlobalResults);
+                            // Compute global Mito parameters                        
+                            // nb of mito, mean mito volume, skeleton parameters
+                            IJ.showStatus("Writing parameters ...");
+                            computeMitoParameters(nucPop.getNbObjects(), mitoPop, skeletonParams, (r+1), rootName+seriesName+"_Mito", outPutGlobalResults);
 
-                        // Save objects image
-                        ImageHandler imhMitoObjects = ImageHandler.wrap(imgMitoOrg).createSameDimensions();
-                        ImageHandler imhNucObjects = imhMitoObjects.duplicate();
-                        mitoPop.draw(imhMitoObjects, 255);
-                        nucPop.draw(imhNucObjects, 255);
-                        ImagePlus[] imgColors = {imhMitoObjects.getImagePlus(), null, imhNucObjects.getImagePlus()};
-                        ImagePlus imgObjects = new RGBStackMerge().mergeHyperstacks(imgColors, false);
-                        imgObjects.setCalibration(cal);
-                        IJ.run(imgObjects, "Enhance Contrast", "saturated=0.35");
-                        FileSaver ImgObjectsFile = new FileSaver(imgObjects);
-                        ImgObjectsFile.saveAsTiff(outDirResults + rootName + "_" + seriesName + "_Objects.tif");
-                        flush_close(imgObjects);
-                        flush_close(imhMitoObjects.getImagePlus());
-                        flush_close(imhNucObjects.getImagePlus());
-                        flush_close(imgNuc);
-                        flush_close(imgMitoOrg);
-                        options.setSeriesOn(s, false);
+                            // Save objects image
+                            ImageHandler imhMitoObjects = ImageHandler.wrap(imgMitoOrg).createSameDimensions();
+                            ImageHandler imhNucObjects = imhMitoObjects.duplicate();
+                            mitoPop.draw(imhMitoObjects, 255);
+                            nucPop.draw(imhNucObjects, 255);
+                            ImagePlus[] imgColors = {imhMitoObjects.getImagePlus(), null, imhNucObjects.getImagePlus()};
+                            ImagePlus imgObjects = new RGBStackMerge().mergeHyperstacks(imgColors, false);
+                            imgObjects.setCalibration(cal);
+                            IJ.run(imgObjects, "Enhance Contrast", "saturated=0.35");
+                            FileSaver ImgObjectsFile = new FileSaver(imgObjects);
+                            ImgObjectsFile.saveAsTiff(outDirResults + rootName + "_" + seriesName + "Roi_"+(r+1)+"_Objects.tif");
+                            flush_close(imgObjects);
+                            flush_close(imhMitoObjects.getImagePlus());
+                            flush_close(imhNucObjects.getImagePlus());
+                            flush_close(imgNuc);
+                            flush_close(imgMitoOrg);
+                            options.setSeriesOn(s, false);
+                        }
                     }
                 }
             }

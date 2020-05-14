@@ -357,7 +357,7 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
     * @param results buffer
     * @throws java.io.IOException
     **/
-    public static void computeMitoParameters(int nuc, Objects3DPopulation mitoPop, double[] mitoParams, 
+    public static void computeMitoParameters(int nuc, Objects3DPopulation mitoPop, double[] mitoParams, int roi, 
             String imgName, BufferedWriter results) throws IOException {
         IJ.showStatus("Computing mitochondria parameters ....");
         // mito volume
@@ -365,7 +365,7 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
         for (int i = 0; i < mitoPop.getNbObjects(); i++) {
             mitoVol += mitoPop.getObject(i).getVolumeUnit();
         }
-        results.write(imgName+"\t"+nuc+"\t"+mitoPop.getNbObjects()+"\t"+mitoVol+"\t"+mitoParams[0]+"\t"+mitoParams[1]+"\t"+mitoParams[2]+"\t"+
+        results.write(imgName+"\t"+roi+"\t"+nuc+"\t"+mitoPop.getNbObjects()+"\t"+mitoVol+"\t"+mitoParams[0]+"\t"+mitoParams[1]+"\t"+mitoParams[2]+"\t"+
                 mitoParams[3]+"\n");
         results.flush();
     }
