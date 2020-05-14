@@ -98,15 +98,15 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
      * @param imgNuc
      * @return 
      */
-    public static Objects3DPopulation find_nucleus2(ImagePlus imgNuc) {
+    public static Objects3DPopulation find_nucleus2(ImagePlus imgNuc, Roi roi) {
         ImagePlus img = imgNuc.duplicate();
-        median_filter(img, 2);
+        median_filter(img, 4);
         ImageStack stack = new ImageStack(imgNuc.getWidth(), imgNuc.getHeight());
         for (int i = 1; i <= img.getStackSize(); i++) {
             img.setZ(i);
             img.updateAndDraw();
-            IJ.run(img, "Nuclei Outline", "blur=30 blur2=35 threshold_method=Triangle outlier_radius=15 outlier_threshold=1 max_nucleus_size=500 "
-                    + "min_nucleus_size=50 erosion=5 expansion_inner=5 expansion=5 results_overlay");
+            IJ.run(img, "Nuclei Outline", "blur=60 blur2=70 threshold_method=Triangle outlier_radius=15 outlier_threshold=1 max_nucleus_size=500 "
+                    + "min_nucleus_size=20 erosion=5 expansion_inner=5 expansion=5 results_overlay");
             img.setZ(1);
             img.updateAndDraw();
             ImagePlus mask = new ImagePlus("mask", img.createRoiMask().getBufferedImage());
@@ -118,6 +118,9 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
         }
         ImagePlus imgStack = new ImagePlus("Nucleus", stack);
         imgStack.setCalibration(imgNuc.getCalibration());
+        if (roi != null)
+            clearOutSide(imgStack, roi);
+
         Objects3DPopulation cellPop = new Objects3DPopulation();
         if (watershed) {
             ImagePlus imgWater = WatershedSplit(imgStack, 8);

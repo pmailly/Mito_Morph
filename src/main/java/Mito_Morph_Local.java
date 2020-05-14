@@ -149,6 +149,16 @@ public class Mito_Morph_Local implements PlugIn {
                         options.setSplitChannels(true);
                         options.setQuiet(true);
                         options.setSeriesOn(s, true);
+                        
+                        // find mito only inside roi if exist roi file
+                        String roiFile = inDir + File.separator+rootName + ".roi";
+                        Roi roi = null;
+                        if (new File(roiFile).exists()) {
+                            // find rois
+                            RoiManager rm = new RoiManager(false);
+                            rm.runCommand("Open", roiFile);
+                            roi = rm.getRoi(1);
+                        }
 
                         /*
                         * Open DAPI channel
@@ -161,7 +171,7 @@ public class Mito_Morph_Local implements PlugIn {
                         ImagePlus imgNuc= BF.openImagePlus(options)[0];
 
                         Objects3DPopulation nucPop = new Objects3DPopulation();
-                        nucPop = find_nucleus2(imgNuc);
+                        nucPop = find_nucleus2(imgNuc, roi);
                         int totalNucPop = nucPop.getNbObjects();
                         System.out.println("Detected nucleus = "+totalNucPop);
 
@@ -188,15 +198,9 @@ public class Mito_Morph_Local implements PlugIn {
                         IJ.run(imgMitoOrg, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
                         threshold(imgMitoOrg, AutoThresholder.Method.RenyiEntropy, false, false);
                         
-                        // find mito only inside roi if exist roi file
-                        String roiFile = inDir + File.separator+rootName + ".roi";
-                        if (new File(roiFile).exists()) {
-                            // find rois
-                            RoiManager rm = new RoiManager(false);
-                            rm.runCommand("Open", roiFile);
-                            Roi roi = rm.getRoi(1);
+                        if (roi != null)
                             clearOutSide(imgMitoOrg, roi);
-                        }
+
 
                         Objects3DPopulation mitoPop = getPopFromImage(imgMitoOrg, cal);
                         //objectsSizeFilter(minMito, maxMito, mitoPop, imgMitoOrg, false); 
