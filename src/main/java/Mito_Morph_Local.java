@@ -163,8 +163,9 @@ public class Mito_Morph_Local implements PlugIn {
                             rois = rm.getRoisAsArray();
                         }
                         else {
-                            IJ.showMessage("No roi found");
-                            return;
+                            //take the whole image
+                            IJ.showMessage("No roi found, taking the whole image");
+                            rois[0] = new Roi(0, 0, reader.getSizeX(), reader.getSizeY());
                         }
                         
                         // for each roi
