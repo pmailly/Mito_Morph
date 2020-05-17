@@ -45,6 +45,7 @@ import static Mito_Utils.JDialogOmeroConnect.imagesFolder;
 import static Mito_Utils.Mito_Processing.clearOutSide;
 import static Mito_Utils.Mito_Processing.writeHeaders;
 import ij.gui.Roi;
+import ij.plugin.Duplicator;
 import ij.plugin.RGBStackMerge;
 import ij.plugin.frame.RoiManager;
 import java.util.ArrayList;
@@ -197,14 +198,14 @@ public class Mito_Morph_Local implements PlugIn {
                             // Find nucleus
                             Objects3DPopulation nucPop = new Objects3DPopulation();
                             imgNucOrg.setRoi(roi);
-                            ImagePlus imgNuc = imgNucOrg.duplicate();
+                            ImagePlus imgNuc = new Duplicator().crop(imgNucOrg);
                             nucPop = find_nucleus2(imgNuc, roi);
                             int totalNucPop = nucPop.getNbObjects();
                             System.out.println("Roi " + (r+1)+" Detected nucleus = "+totalNucPop);
 
                             // Find mitos
                             imgMitoOrg.setRoi(roi);
-                            ImagePlus imgMito = imgMitoOrg.duplicate();
+                            ImagePlus imgMito = new Duplicator().crop(imgMitoOrg);
                             median_filter(imgMito, 1.5);
                             IJ.run(imgMito, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
                             threshold(imgMito, AutoThresholder.Method.RenyiEntropy, false, false);

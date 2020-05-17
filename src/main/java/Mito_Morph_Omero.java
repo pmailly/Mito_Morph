@@ -31,8 +31,10 @@ import static Mito_Utils.OmeroConnect.getImageZ;
 import static Mito_Utils.OmeroConnect.getResolutionImage;
 import static Mito_Utils.OmeroConnect.securityContext;
 import ij.gui.Roi;
+import ij.gui.WaitForUserDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
+import ij.plugin.Duplicator;
 import ij.plugin.RGBStackMerge;
 import java.io.BufferedWriter;
 import java.util.ArrayList;
@@ -111,16 +113,18 @@ public class Mito_Morph_Omero implements PlugIn {
                         // for all rois
                         for( int r = 0; r < rois.size(); r++) {
                             Roi roi = rois.get(r);
+                            
                             Objects3DPopulation nucPop = new Objects3DPopulation();
-                            imgNucOrg.setRoi(roi);
-                            ImagePlus imgNuc = imgNucOrg.duplicate();
+                            new WaitForUserDialog("test").show();
+                            ImagePlus imgNuc = new Duplicator().crop(imgNucOrg);
+                            
                             nucPop = find_nucleus2(imgNuc, roi);
                             int totalNucPop = nucPop.getNbObjects();
                             System.out.println("Roi " + (r+1)+" Detected nucleus = "+totalNucPop);
                         
                             // Find mitos
                             imgMitoOrg.setRoi(roi);
-                            ImagePlus imgMito = imgMitoOrg.duplicate();
+                            ImagePlus imgMito = new Duplicator().crop(imgMitoOrg);
                             median_filter(imgMito, 1.5);
                             IJ.run(imgMito, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
                             threshold(imgMito, AutoThresholder.Method.RenyiEntropy, false, false);
@@ -141,6 +145,7 @@ public class Mito_Morph_Omero implements PlugIn {
                         
                             // Save objects image
                             ImageHandler imhMitoObjects = ImageHandler.wrap(imgMito).createSameDimensions();
+                            imhMitoObjects.setCalibration(imgMitoOrg.getCalibration());
                             ImageHandler imhNucObjects = imhMitoObjects.duplicate();
                             mitoPop.draw(imhMitoObjects, 255);
                             nucPop.draw(imhNucObjects, 255);
