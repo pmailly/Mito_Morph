@@ -115,9 +115,7 @@ public class Mito_Morph_Omero implements PlugIn {
                             Roi roi = rois.get(r);
                             
                             Objects3DPopulation nucPop = new Objects3DPopulation();
-                            new WaitForUserDialog("test").show();
                             ImagePlus imgNuc = new Duplicator().crop(imgNucOrg);
-                            
                             nucPop = find_nucleus2(imgNuc, roi);
                             int totalNucPop = nucPop.getNbObjects();
                             System.out.println("Roi " + (r+1)+" Detected nucleus = "+totalNucPop);
