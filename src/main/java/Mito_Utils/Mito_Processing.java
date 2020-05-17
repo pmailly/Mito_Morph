@@ -121,7 +121,6 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
         ImagePlus imgStack = new ImagePlus("Nucleus", stack);
         imgStack.setCalibration(imgNuc.getCalibration());
         clearOutSide(imgStack, roi);
-
         Objects3DPopulation cellPop = new Objects3DPopulation();
         if (watershed) {
             ImagePlus imgWater = WatershedSplit(imgStack, 8);
@@ -268,6 +267,7 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
      * @param roi
      */
     public static void clearOutSide(ImagePlus img, Roi roi) {
+        roi.setLocation(0, 0);
         for (int n = 1; n <= img.getNSlices(); n++) {
             ImageProcessor ip = img.getImageStack().getProcessor(n);
             ip.setRoi(roi);
@@ -275,6 +275,7 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
             ip.setColor(0);
             ip.fillOutside(roi);
         }
+        img.deleteRoi();
         img.updateAndDraw();
     }
     

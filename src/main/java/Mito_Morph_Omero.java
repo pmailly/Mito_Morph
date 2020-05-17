@@ -115,14 +115,15 @@ public class Mito_Morph_Omero implements PlugIn {
                             Roi roi = rois.get(r);
                             
                             Objects3DPopulation nucPop = new Objects3DPopulation();
-                            ImagePlus imgNuc = new Duplicator().crop(imgNucOrg);
+                            imgNucOrg.setRoi(roi);
+                            ImagePlus imgNuc = new Duplicator().run(imgNucOrg, 1, imgNucOrg.getNSlices());
                             nucPop = find_nucleus2(imgNuc, roi);
                             int totalNucPop = nucPop.getNbObjects();
                             System.out.println("Roi " + (r+1)+" Detected nucleus = "+totalNucPop);
-                        
+                            
                             // Find mitos
                             imgMitoOrg.setRoi(roi);
-                            ImagePlus imgMito = new Duplicator().crop(imgMitoOrg);
+                            ImagePlus imgMito = new Duplicator().run(imgMitoOrg, 1, imgMitoOrg.getNSlices());
                             median_filter(imgMito, 1.5);
                             IJ.run(imgMito, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
                             threshold(imgMito, AutoThresholder.Method.RenyiEntropy, false, false);
