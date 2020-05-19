@@ -5,8 +5,6 @@
  */
 package Mito_Utils;
 
-import static Mito_Utils.OmeroConnect.connect;
-import static Mito_Utils.OmeroConnect.gateway;
 import static Mito_Utils.OmeroConnect.getUserId;
 import ij.IJ;
 import java.io.File;
@@ -14,9 +12,7 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFileChooser;
-import omero.gateway.model.ProjectData;
 import omero.gateway.model.DatasetData;
-import omero.gateway.model.ExperimenterData;
 import omero.gateway.model.ImageData;
 import omero.gateway.model.ProjectData;
 

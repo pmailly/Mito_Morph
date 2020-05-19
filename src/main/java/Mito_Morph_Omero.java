@@ -31,7 +31,6 @@ import static Mito_Utils.OmeroConnect.getImageZ;
 import static Mito_Utils.OmeroConnect.getResolutionImage;
 import static Mito_Utils.OmeroConnect.securityContext;
 import ij.gui.Roi;
-import ij.gui.WaitForUserDialog;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
 import ij.plugin.Duplicator;
