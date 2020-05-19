@@ -562,24 +562,24 @@ public class OmeroConnect {
                         RectangleData rectData = (RectangleData) s;
                         roi = new Roi(rectData.getX(), rectData.getY(), rectData.getWidth(), rectData.getHeight());
                     }
-                    if (s instanceof EllipseData) {
+                    else if (s instanceof EllipseData) {
                         EllipseData ellipse = (EllipseData) s;
                         roi = new OvalRoi(ellipse.getX(), ellipse.getY(), ellipse.getRadiusX(), ellipse.getRadiusY());
                     }
-                    if (s instanceof PointData) {
+                    else if (s instanceof PointData) {
                         PointData pt = (PointData) s;
                         roi = new PointRoi(pt.getX(), pt.getY());
                     }
-                    if (s instanceof LineData) {
+                    else if (s instanceof LineData) {
                         LineData lineData = (LineData) s;
                         roi = new Line(lineData.getX1(), lineData.getY1(), lineData.getX2(), lineData.getY2());
                     }
-                    if (s instanceof MaskData) {
+                    else if (s instanceof MaskData) {
                         MaskData maskData = (MaskData) s;
                         roi = new Roi(maskData.getX(), maskData.getY(), maskData.getWidth(), maskData.getHeight());
                         
                     }
-                    if (s instanceof PolygonData) {
+                    else if (s instanceof PolygonData) {
                         PolygonData polyData = (PolygonData) s;
                         List<Point2D.Double> points = polyData.getPoints();
                         Polygon poly = new Polygon();
