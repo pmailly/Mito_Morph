@@ -20,12 +20,6 @@ public class Mito_Morph implements PlugIn {
     private String imageDir = "";
     public static String outDirResults = "";
     public static final Calibration cal = new Calibration();
-
-
-// min volume in microns^3 for dots
-    private final double minMito = 0.05;
-// max volume in microns^3 for dots
-    private final double maxMito = Double.MAX_VALUE;
    
 // Default Z step
     public static double zStep = 0.193;

@@ -41,6 +41,8 @@ import static Mito_Utils.Mito_Processing.threshold;
 import static Mito_Utils.JDialogOmeroConnect.dialogCancel;
 import static Mito_Utils.JDialogOmeroConnect.imagesFolder;
 import static Mito_Utils.Mito_Processing.clearOutSide;
+import static Mito_Utils.Mito_Processing.findMitos;
+import static Mito_Utils.Mito_Processing.objectsSizeFilter;
 import static Mito_Utils.Mito_Processing.writeHeaders;
 import ij.gui.Roi;
 import ij.plugin.Duplicator;
@@ -58,12 +60,6 @@ public class Mito_Morph_Local implements PlugIn {
     private String imageDir = "";
     public static String outDirResults = "";
     public static final Calibration cal = new Calibration();
-
-
-// min volume in microns^3 for dots
-    private final double minMito = 0.05;
-// max volume in microns^3 for dots
-    private final double maxMito = Double.MAX_VALUE;
     public BufferedWriter outPutGlobalResults;    
     
     
@@ -205,13 +201,7 @@ public class Mito_Morph_Local implements PlugIn {
                             // Find mitos
                             imgMitoOrg.setRoi(roi);
                             ImagePlus imgMito = new Duplicator().run(imgMitoOrg,1,imgMitoOrg.getNSlices());
-                            median_filter(imgMito, 1.5);
-                            IJ.run(imgMito, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
-                            threshold(imgMito, AutoThresholder.Method.RenyiEntropy, false, false);
-                            clearOutSide(imgMito, roi);
-
-                            Objects3DPopulation mitoPop = getPopFromImage(imgMito, cal);
-                            //objectsSizeFilter(minMito, maxMito, mitoPop, imgMitoOrg, false); 
+                            Objects3DPopulation mitoPop = findMitos(imgMito, roi);
                             System.out.println("Mito pop = "+ mitoPop.getNbObjects());
 
                             // Find mito network morphology

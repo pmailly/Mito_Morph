@@ -21,8 +21,10 @@ import static Mito_Utils.JDialogOmeroConnect.selectedDataset;
 import static Mito_Utils.JDialogOmeroConnect.selectedProject;
 import static Mito_Utils.Mito_Processing.analyzeSkeleton;
 import static Mito_Utils.Mito_Processing.clearOutSide;
+import static Mito_Utils.Mito_Processing.findMitos;
 import static Mito_Utils.Mito_Processing.getPopFromImage;
 import static Mito_Utils.Mito_Processing.median_filter;
+import static Mito_Utils.Mito_Processing.objectsSizeFilter;
 import static Mito_Utils.Mito_Processing.threshold;
 import Mito_Utils.OmeroConnect;
 import static Mito_Utils.OmeroConnect.addFileAnnotation;
@@ -123,13 +125,7 @@ public class Mito_Morph_Omero implements PlugIn {
                             // Find mitos
                             imgMitoOrg.setRoi(roi);
                             ImagePlus imgMito = new Duplicator().run(imgMitoOrg, 1, imgMitoOrg.getNSlices());
-                            median_filter(imgMito, 1.5);
-                            IJ.run(imgMito, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
-                            threshold(imgMito, AutoThresholder.Method.RenyiEntropy, false, false);
-                            clearOutSide(imgMito, roi);
-
-                            Objects3DPopulation mitoPop = getPopFromImage(imgMito, cal);
-                            //objectsSizeFilter(minMito, maxMito, mitoPop, imgMitoOrg, false); 
+                            Objects3DPopulation mitoPop = findMitos(imgMito, roi);
                             System.out.println("Mito pop = "+ mitoPop.getNbObjects());
 
                             // Find mito network morphology

@@ -47,6 +47,10 @@ public class Mito_Processing {
     // Max distance to track object
     public static double maxDist = 5;
     public static boolean watershed = false; 
+    // min volume in microns^3 for dots
+    private static final double minMito = 0.02;
+// max volume in microns^3 for dots
+    private static final double maxMito = Double.MAX_VALUE;
     
  /**
  * 
@@ -77,6 +81,23 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
         return(dir);
     }
     
+    /**
+     * Find mitos
+     * @param imgMitos
+     * @param roi 
+     * @return  
+     */
+    public static Objects3DPopulation findMitos(ImagePlus imgMitos, Roi roi) {
+        median_filter(imgMitos, 1.5);
+        IJ.run(imgMitos, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
+        threshold(imgMitos, AutoThresholder.Method.RenyiEntropy, false, false);
+        IJ.run(imgMitos, "Options...", "iterations=2 count=1 do=Open stack");
+        clearOutSide(imgMitos, roi);
+        Objects3DPopulation mitoPop = getPopFromImage(imgMitos, imgMitos.getCalibration());
+        objectsSizeFilter(minMito, maxMito, mitoPop, imgMitos, false); 
+        return(mitoPop);
+    }
+        
     
     /*Median filter 
      * 
