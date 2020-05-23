@@ -92,7 +92,6 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
         median_filter(imgMitos, 1.5);
         IJ.run(imgMitos, "Laplacian of Gaussian", "sigma=4 scale_normalised negate stack");
         threshold(imgMitos, AutoThresholder.Method.RenyiEntropy, false, false);
-        IJ.run(imgMitos, "Options...", "iterations=2 count=1 do=Open stack");
         clearOutSide(imgMitos, roi);
         Objects3DPopulation mitoPop = getPopFromImage(imgMitos, imgMitos.getCalibration());
         objectsSizeFilter(minMito, maxMito, mitoPop, imgMitos, false); 
