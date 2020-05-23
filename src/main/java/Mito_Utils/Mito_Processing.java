@@ -7,6 +7,7 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.Prefs;
 import ij.gui.Roi;
+import ij.gui.WaitForUserDialog;
 import ij.io.FileSaver;
 import ij.measure.Calibration;
 import ij.measure.ResultsTable;
@@ -293,9 +294,11 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
             ip.setBackgroundValue(0);
             ip.setColor(0);
             ip.fillOutside(roi);
-        }
+        }img.show();
+        new WaitForUserDialog("test").show();
         img.deleteRoi();
         img.updateAndDraw();
+        
     }
     
     public static ImagePlus WatershedSplit(ImagePlus binaryMask, float rad) {
@@ -331,7 +334,7 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
      * @return {#branch, branchLenght, #endPoint, #junction}
      */
 
-    public static double[] analyzeSkeleton (ImagePlus img, String outFileName) {
+    public static double[] analyzeSkeleton (ImagePlus img, int r, String outFileName) {
         IJ.run(img, "Skeletonize (2D/3D)", "");
 	String imgTitle = img.getTitle();
         AnalyzeSkeleton_ analyzeSkeleton = new AnalyzeSkeleton_();
@@ -362,7 +365,7 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
         }
         double[] skeletonParams = {branches, branchLength, endPoint, junction};
         FileSaver imgSave = new FileSaver(imgLabProj);
-        imgSave.saveAsTiff(outFileName+"_LabelledSkel.tif");
+        imgSave.saveAsTiff(outFileName+"_Roi-"+r+"_LabelledSkel.tif");
         flush_close(imgLabProj); 
         return(skeletonParams);
     }

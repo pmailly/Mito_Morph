@@ -13,12 +13,10 @@
 import static Mito_Utils.Mito_Processing.analyzeSkeleton;
 import static Mito_Utils.Mito_Processing.computeMitoParameters;
 import static Mito_Utils.Mito_Processing.find_nucleus2;
-import static Mito_Utils.Mito_Processing.getPopFromImage;
 import ij.*;
 import ij.io.FileSaver;
 import ij.measure.Calibration;
 import ij.plugin.PlugIn;
-import ij.process.AutoThresholder;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -36,15 +34,12 @@ import loci.plugins.util.ImageProcessorReader;
 import mcib3d.geom.Objects3DPopulation;
 import mcib3d.image3d.ImageHandler;
 import static Mito_Utils.Mito_Processing.flush_close;
-import static Mito_Utils.Mito_Processing.median_filter;
-import static Mito_Utils.Mito_Processing.threshold;
 import static Mito_Utils.JDialogOmeroConnect.dialogCancel;
 import static Mito_Utils.JDialogOmeroConnect.imagesFolder;
-import static Mito_Utils.Mito_Processing.clearOutSide;
 import static Mito_Utils.Mito_Processing.findMitos;
-import static Mito_Utils.Mito_Processing.objectsSizeFilter;
 import static Mito_Utils.Mito_Processing.writeHeaders;
 import ij.gui.Roi;
+import ij.gui.WaitForUserDialog;
 import ij.plugin.Duplicator;
 import ij.plugin.RGBStackMerge;
 import ij.plugin.frame.RoiManager;
@@ -189,24 +184,26 @@ public class Mito_Morph_Local implements PlugIn {
                         for( int r = 0; r < rois.size(); r++) {
                             Roi roi = rois.get(r);
                             
-                            // Find nucleus
-                            Objects3DPopulation nucPop = new Objects3DPopulation();
-                            imgNucOrg.setRoi(roi);
+                            // crop images
                             
+                            imgNucOrg.setRoi(roi);
                             ImagePlus imgNuc = new Duplicator().run(imgNucOrg, 1, imgNucOrg.getNSlices());
+                            imgMitoOrg.setRoi(roi);
+                            ImagePlus imgMito = new Duplicator().run(imgMitoOrg,1,imgMitoOrg.getNSlices());
+                            
+                            // FInd nucleus
+                            Objects3DPopulation nucPop = new Objects3DPopulation();
                             nucPop = find_nucleus2(imgNuc, roi);
                             int totalNucPop = nucPop.getNbObjects();
                             System.out.println("Roi " + (r+1)+" Detected nucleus = "+totalNucPop);
 
                             // Find mitos
-                            imgMitoOrg.setRoi(roi);
-                            ImagePlus imgMito = new Duplicator().run(imgMitoOrg,1,imgMitoOrg.getNSlices());
                             Objects3DPopulation mitoPop = findMitos(imgMito, roi);
                             System.out.println("Mito pop = "+ mitoPop.getNbObjects());
 
                             // Find mito network morphology
                             // Skeletonize
-                            double[] skeletonParams = analyzeSkeleton(imgMito, outDirResults+rootName);
+                            double[] skeletonParams = analyzeSkeleton(imgMito, (r+1), outDirResults+rootName);
 
 
                             // Compute global Mito parameters                        

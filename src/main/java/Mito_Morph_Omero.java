@@ -9,7 +9,6 @@ import static Mito_Utils.Mito_Processing.find_nucleus2;
 import ij.*;
 import ij.io.FileSaver;
 import ij.plugin.PlugIn;
-import ij.process.AutoThresholder;
 import java.io.File;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -20,12 +19,7 @@ import static Mito_Utils.JDialogOmeroConnect.imageData;
 import static Mito_Utils.JDialogOmeroConnect.selectedDataset;
 import static Mito_Utils.JDialogOmeroConnect.selectedProject;
 import static Mito_Utils.Mito_Processing.analyzeSkeleton;
-import static Mito_Utils.Mito_Processing.clearOutSide;
 import static Mito_Utils.Mito_Processing.findMitos;
-import static Mito_Utils.Mito_Processing.getPopFromImage;
-import static Mito_Utils.Mito_Processing.median_filter;
-import static Mito_Utils.Mito_Processing.objectsSizeFilter;
-import static Mito_Utils.Mito_Processing.threshold;
 import Mito_Utils.OmeroConnect;
 import static Mito_Utils.OmeroConnect.addFileAnnotation;
 import static Mito_Utils.OmeroConnect.gateway;
@@ -115,22 +109,25 @@ public class Mito_Morph_Omero implements PlugIn {
                         for( int r = 0; r < rois.size(); r++) {
                             Roi roi = rois.get(r);
                             
-                            Objects3DPopulation nucPop = new Objects3DPopulation();
+                            // Crop images
                             imgNucOrg.setRoi(roi);
                             ImagePlus imgNuc = new Duplicator().run(imgNucOrg, 1, imgNucOrg.getNSlices());
+                            imgMitoOrg.setRoi(roi);
+                            ImagePlus imgMito = new Duplicator().run(imgMitoOrg, 1, imgMitoOrg.getNSlices());
+                            
+                            // Find nucleus
+                            Objects3DPopulation nucPop = new Objects3DPopulation();
                             nucPop = find_nucleus2(imgNuc, roi);
                             int totalNucPop = nucPop.getNbObjects();
                             System.out.println("Roi " + (r+1)+" Detected nucleus = "+totalNucPop);
                             
                             // Find mitos
-                            imgMitoOrg.setRoi(roi);
-                            ImagePlus imgMito = new Duplicator().run(imgMitoOrg, 1, imgMitoOrg.getNSlices());
                             Objects3DPopulation mitoPop = findMitos(imgMito, roi);
                             System.out.println("Mito pop = "+ mitoPop.getNbObjects());
 
                             // Find mito network morphology
                             // Skeletonize
-                            double[] skeletonParams = analyzeSkeleton(imgMito, tempDir + rootName);
+                            double[] skeletonParams = analyzeSkeleton(imgMito, (r+1), tempDir + rootName);
                                                     
                             // Compute global Mito parameters
                             // nb of mito, mean mito volume, skeleton parameters
