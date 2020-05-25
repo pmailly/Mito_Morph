@@ -293,8 +293,7 @@ public static BufferedWriter writeHeaders(String outFileResults, String header) 
             ip.setBackgroundValue(0);
             ip.setColor(0);
             ip.fillOutside(roi);
-        }img.show();
-        new WaitForUserDialog("test").show();
+        }
         img.deleteRoi();
         img.updateAndDraw();
         
