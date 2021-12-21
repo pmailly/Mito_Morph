@@ -35,19 +35,7 @@
 	</properties>
 
 	<dependencies>
-                		<!-- Clipper -->
-		<dependency>
-			<groupId>de.lighti</groupId>
-			<artifactId>Clipper</artifactId>
-			<version>6.4.2</version>
-			<scope>system</scope>
-			<systemPath>${basedir}/lib/Clipper-6.4.2.jar</systemPath>
-		</dependency>
-                <dependency>
-                    <groupId>de.csbdresden</groupId>
-                    <artifactId>csbdeep</artifactId>
-                    <version>0.3.5-SNAPSHOT</version>
-                </dependency>
+
 		<dependency>
 			<groupId>net.imagej</groupId>
 			<artifactId>ij</artifactId>
