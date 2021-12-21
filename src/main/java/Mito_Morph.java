@@ -16,7 +16,6 @@ import ij.*;
 import ij.io.FileSaver;
 import ij.measure.Calibration;
 import ij.plugin.PlugIn;
-import ij.process.AutoThresholder;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -35,11 +34,9 @@ import mcib3d.geom.Objects3DPopulation;
 import mcib3d.image3d.ImageHandler;
 
 import ij.gui.Roi;
-import ij.plugin.Duplicator;
 import ij.plugin.RGBStackMerge;
 import ij.plugin.frame.RoiManager;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import loci.plugins.BF;
 import loci.plugins.in.ImporterOptions;
@@ -97,8 +94,8 @@ public class Mito_Morph implements PlugIn {
             */
             // Global file for mito results
             String resultsName = "GlobalResults.xls";
-            String header = "ImageName\tRoi\tNucleus number\tMito number\tMito Volume\tMito branch number\tMito branch length\t"
-                    + "Mito end points\tMito junction number\n";
+            String header = "ImageName\tRoi\tNucleus number\tMito number\tMito volume\tMito mean intensity\tMito branch number\tMito branch length\t"
+                    + "Mito end points\tMito junction number\tDNA number\tDNA volume\tDNA mean intensity\n";
             outPutGlobalResults = proc.writeHeaders(outDirResults+resultsName, header); 
 
             // Reset foreground and background
@@ -185,17 +182,15 @@ public class Mito_Morph implements PlugIn {
                         options.setCEnd(s, dnaCh);System.out.println("Opening dna channel");
                         ImagePlus imgDnaOrg = BF.openImagePlus(options)[0];
                          // Find Dna
-                        Objects3DPopulation dnaPop = proc.find_DNA(imgDnaOrg, roi);
-                        System.out.println("DNA pop = "+ dnaPop.getNbObjects());
-                        proc.flush_close(imgDnaOrg);
-                        
+                        Objects3DPopulation dnaPop = proc.find_DNA(imgDnaOrg, roi, nucPop);
+                        System.out.println("DNA pop = "+ dnaPop.getNbObjects());                        
                         
                         // Mito channel
                         int mitoCh = channelIndex[1];
                         options.setCBegin(s, mitoCh);
                         options.setCEnd(s, mitoCh);System.out.println("Opening mito channel");
                         ImagePlus imgMitoOrg = BF.openImagePlus(options)[0];// Find Mitos
-                        Objects3DPopulation mitoPop = proc.find_Mito(imgMitoOrg, roi);
+                        Objects3DPopulation mitoPop = proc.find_Mito(imgMitoOrg, roi, nucPop);
                         System.out.println("Mito pop = "+ mitoPop.getNbObjects());
                         
                         // Find mito network morphology
@@ -204,9 +199,9 @@ public class Mito_Morph implements PlugIn {
                         // Compute global Mito parameters                        
                         // nb of mito, mean mito volume, skeleton parameters
                         IJ.showStatus("Writing parameters ...");
-                        proc.computeMitoParameters(nucPop.getNbObjects(), mitoPop, skeletonParams, roiName, rootName+seriesName, outPutGlobalResults);
+                        proc.computeParameters(nucPop.getNbObjects(), mitoPop, imgMitoOrg, dnaPop, imgDnaOrg, skeletonParams, roiName, rootName+seriesName, outPutGlobalResults);
                         proc.flush_close(imgMitoOrg);
-
+                        proc.flush_close(imgDnaOrg);
                         // Save objects image
                         ImageHandler imhMitoObjects = ImageHandler.wrap(imgNucOrg).createSameDimensions();
                         ImageHandler imhNucObjects = imhMitoObjects.duplicate();
