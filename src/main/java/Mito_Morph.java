@@ -4,35 +4,60 @@
  * Author Philippe Mailly
  */
 
+
+/* 
+* Images on local machine
+*/
+
+
+import Mito_Utils.Mito_Processing;
+
 import ij.*;
+import ij.io.FileSaver;
 import ij.measure.Calibration;
 import ij.plugin.PlugIn;
+import ij.process.AutoThresholder;
 import java.io.BufferedWriter;
-import Mito_Utils.JDialogOmeroConnect;
-import static Mito_Utils.JDialogOmeroConnect.localImages;
-import java.awt.Frame;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import loci.common.services.DependencyException;
+import loci.common.services.ServiceException;
+import loci.common.services.ServiceFactory;
+import loci.formats.FormatException;
+import loci.formats.meta.IMetadata;
+import loci.formats.services.OMEXMLService;
+import loci.plugins.util.ImageProcessorReader;
+import mcib3d.geom.Objects3DPopulation;
+import mcib3d.image3d.ImageHandler;
+
+import ij.gui.Roi;
+import ij.plugin.Duplicator;
+import ij.plugin.RGBStackMerge;
+import ij.plugin.frame.RoiManager;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import loci.plugins.BF;
+import loci.plugins.in.ImporterOptions;
+import java.awt.Rectangle;
+import loci.common.Region;
+import org.apache.commons.io.FilenameUtils;
 
 
 public class Mito_Morph implements PlugIn {
 
-    private final boolean dialogCancel = false;
-    private final boolean canceled = false;
     private String imageDir = "";
     public static String outDirResults = "";
-    public static final Calibration cal = new Calibration();
-
-
-// min volume in microns^3 for dots
-    private final double minMito = 0.05;
-// max volume in microns^3 for dots
-    private final double maxMito = Double.MAX_VALUE;
-   
-// Default Z step
-    public static double zStep = 0.193;
-
+    private static Calibration cal = new Calibration();
+    private File inDir;
+    private String[] chsName;
     public BufferedWriter outPutGlobalResults;    
     
-    public static String imageExt = "czi";
+    Mito_Processing proc = new Mito_Processing();
 
     /**
      * 
@@ -40,32 +65,173 @@ public class Mito_Morph implements PlugIn {
      */
     @Override
     public void run(String arg) {
-        if (canceled) {
-            IJ.showMessage(" Pluging canceled");
-            return;
-        }
-        JDialogOmeroConnect dialog = new JDialogOmeroConnect(new Frame(), true);
-        dialog.show();
-        if (dialogCancel){
-            IJ.showStatus(" Pluging canceled");
-            return;
-        }
+        String imageExt = "czi";
+        final boolean canceled = false;
+        
+        try {
+            if (canceled) {
+                IJ.showMessage(" Pluging canceled");
+                return;
+            }
+            if (!proc.checkInstalledModules()) {
+                IJ.showMessage(" Pluging canceled");
+                return;
+            }
+            imageDir = IJ.getDirectory("Images folder");
+            if (imageDir == null) {
+                return;
+            }
+            inDir = new File(imageDir);
+            ArrayList<String> imageFiles = proc.findImages(imageDir, "czi");
+            if (imageFiles == null) {
+                return;
+            }
+            // create output folder
+            outDirResults = imageDir + "Results"+ File.separator;
+            File outDir = new File(outDirResults);
+            if (!Files.exists(Paths.get(outDirResults))) {
+                outDir.mkdir();
+            }
+            /*
+            * Write headers results for results file
+            */
+            // Global file for mito results
+            String resultsName = "GlobalResults.xls";
+            String header = "ImageName\tRoi\tNucleus number\tMito number\tMito Volume\tMito branch number\tMito branch length\t"
+                    + "Mito end points\tMito junction number\n";
+            outPutGlobalResults = proc.writeHeaders(outDirResults+resultsName, header); 
 
-        /* 
-        * Images on local machine
-        */
+            // Reset foreground and background
+            IJ.run("Colors...", "foreground=white background=black");
+            
+            // create OME-XML metadata store of the latest schema version
+            ServiceFactory factory;
+            factory = new ServiceFactory();
+            OMEXMLService service = factory.getInstance(OMEXMLService.class);
+            IMetadata meta = service.createOMEXMLMetadata();
+            ImageProcessorReader reader = new ImageProcessorReader();
+            reader.setMetadataStore(meta);
+            Collections.sort(imageFiles);
+            // Find channel names , calibration
+            reader.setId(imageFiles.get(0));
+            cal = proc.findImageCalib(meta, reader);
+            chsName = proc.findChannels(imageFiles.get(0), meta, reader, true);
+            int[] channelIndex = proc.dialog(chsName);
+            cal = proc.getCalib();
+            if (channelIndex == null)
+                return;
+            for (String f : imageFiles) {
+                String rootName = FilenameUtils.getBaseName(f);
+                reader.setId(f);
+                int series = reader.getSeries();
+                reader.setSeries(series);
+                series = reader.getSeriesCount();  
+                for (int s = 0; s < series; s++) {
+                    reader.setSeries(s);
+                    String seriesName = meta.getImageName(s);
+                    ImporterOptions options = new ImporterOptions();
+                    options.setColorMode(ImporterOptions.COLOR_MODE_GRAYSCALE);
+                    options.setId(f);
+                    options.setSplitChannels(true);
+                    options.setQuiet(true);
+                    options.setSeriesOn(s, true);
+                    options.setCrop(true);
+                    // find rois if exist roi file
+                    String roiFile = "";
+                    if (new File(inDir + File.separator+rootName + ".roi").exists())
+                        roiFile = inDir + File.separator+rootName + ".roi";
+                    else if (new File(inDir + File.separator+rootName + ".zip").exists())
+                        roiFile = inDir + File.separator+rootName + ".zip";
+                    else {
+                        IJ.showStatus("No roi file found skip image !!!");
+                        return;
+                    }
+                    ArrayList<Roi> rois = new ArrayList<>();
+                    // find rois
+                    System.out.println("Find roi " + new File(roiFile).getName());
+                    RoiManager rm = new RoiManager(false);
+                    rm.runCommand("Open", roiFile);
+                    for (Roi roi : rm.getRoisAsArray()) 
+                        rois.add(roi);
+                    
+                    
 
-        if (localImages) {
-            new Mito_Morph_Local().run("");
-        }
-        /*
-        Images on OMERO server
-        */
+                    // for each roi
+                    for( int r = 0; r < rois.size(); r++) {
+                        Roi roi = rois.get(r);
+                        String roiName = roi.getName();
+                        Rectangle rect = roi.getBounds();
+                        Region reg = new Region(rect.x, rect.y, rect.width, rect.height);
+                        options.setCropRegion(s, reg);
+                        
+                        /*
+                        * Open channels
+                        */
+                        // DAPI channel
+                        int dapiCh = channelIndex[0];                        
+                        options.setCBegin(s, dapiCh);
+                        options.setCEnd(s, dapiCh);System.out.println("-- Series : "+ seriesName);
+                        System.out.println("Opening Nucleus channel");
+                        ImagePlus imgNucOrg= BF.openImagePlus(options)[0];  
+                        
+                        // Find nucleus
+                        Objects3DPopulation nucPop = proc.find_nucleus(imgNucOrg, roi);
+                        int totalNucPop = nucPop.getNbObjects();
+                        System.out.println(roiName +" roi Detected nucleus = "+totalNucPop);
+                        
+                        // Dna channel
+                        int dnaCh = channelIndex[2];
+                        options.setCBegin(s, dnaCh);
+                        options.setCEnd(s, dnaCh);System.out.println("Opening dna channel");
+                        ImagePlus imgDnaOrg = BF.openImagePlus(options)[0];
+                         // Find Dna
+                        Objects3DPopulation dnaPop = proc.find_DNA(imgDnaOrg, roi);
+                        System.out.println("DNA pop = "+ dnaPop.getNbObjects());
+                        proc.flush_close(imgDnaOrg);
+                        
+                        
+                        // Mito channel
+                        int mitoCh = channelIndex[1];
+                        options.setCBegin(s, mitoCh);
+                        options.setCEnd(s, mitoCh);System.out.println("Opening mito channel");
+                        ImagePlus imgMitoOrg = BF.openImagePlus(options)[0];// Find Mitos
+                        Objects3DPopulation mitoPop = proc.find_Mito(imgMitoOrg, roi);
+                        System.out.println("Mito pop = "+ mitoPop.getNbObjects());
+                        
+                        // Find mito network morphology
+                        // Skeletonize
+                        double[] skeletonParams = proc.analyzeSkeleton(imgMitoOrg, roi, mitoPop, outDirResults+rootName);
+                        // Compute global Mito parameters                        
+                        // nb of mito, mean mito volume, skeleton parameters
+                        IJ.showStatus("Writing parameters ...");
+                        proc.computeMitoParameters(nucPop.getNbObjects(), mitoPop, skeletonParams, roiName, rootName+seriesName, outPutGlobalResults);
+                        proc.flush_close(imgMitoOrg);
 
-        else {
-            new Mito_Morph_Omero().run("");     
-        }
-
-        IJ.showStatus("Process done");
+                        // Save objects image
+                        ImageHandler imhMitoObjects = ImageHandler.wrap(imgNucOrg).createSameDimensions();
+                        ImageHandler imhNucObjects = imhMitoObjects.duplicate();
+                        ImageHandler imhDnaObjects = imhMitoObjects.duplicate();
+                        mitoPop.draw(imhMitoObjects, 255);
+                        nucPop.draw(imhNucObjects, 255);
+                        dnaPop.draw(imhDnaObjects, 255);
+                        ImagePlus[] imgColors = {imhMitoObjects.getImagePlus(), imhDnaObjects.getImagePlus(), imhNucObjects.getImagePlus()};
+                        ImagePlus imgObjects = new RGBStackMerge().mergeHyperstacks(imgColors, false);
+                        imgObjects.setCalibration(cal);
+                        IJ.run(imgObjects, "Enhance Contrast", "saturated=0.35");
+                        FileSaver ImgObjectsFile = new FileSaver(imgObjects);
+                        ImgObjectsFile.saveAsTiff(outDirResults + rootName + "_" + seriesName + "Roi_"+(r+1)+"_Objects.tif");
+                        proc.flush_close(imgObjects);
+                        proc.flush_close(imhMitoObjects.getImagePlus());
+                        proc.flush_close(imhNucObjects.getImagePlus());
+                        proc.flush_close(imgNucOrg);
+                    }
+                    options.setSeriesOn(s, false);
+                }
+            }
+            outPutGlobalResults.close();
+            IJ.showStatus("Process done");
+        }   catch (IOException | DependencyException | ServiceException | FormatException ex) {
+            Logger.getLogger(Mito_Morph.class.getName()).log(Level.SEVERE, null, ex);
+        } 
     }
 }
