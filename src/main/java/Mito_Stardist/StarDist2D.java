@@ -87,7 +87,7 @@ public class StarDist2D extends StarDist2DBase implements Command {
         tmpModelFile_  = starDistModel;
     }
     
-    
+
     /**
      * Check image size
      * change nTiles if image > 2048x2048 

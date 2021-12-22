@@ -39,6 +39,7 @@ import mcib3d.image3d.ImageLabeller;
 import mpicbg.ij.integral.RemoveOutliers;
 import net.haesleinhuepf.clij.clearcl.ClearCLBuffer;
 import net.haesleinhuepf.clij2.CLIJ2;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.scijava.util.ArrayUtils;
 import sc.fiji.analyzeSkeleton.AnalyzeSkeleton_;
@@ -78,7 +79,7 @@ public class Mito_Processing {
     
     // Stardist
     public Object syncObject = new Object();
-    public final double stardistPercentileBottom = 0.2;
+    public final double stardistPercentileBottom = 2;
     public final double stardistPercentileTop = 99.8;
     public final double stardistProbThresh = 0.1;
     public final double stardistOverlayThresh = 0.35;
@@ -115,9 +116,15 @@ public class Mito_Processing {
     /*
     Find starDist models in Fiji models folder
     */
-    private String[] findStardistModels() {
-        FilenameFilter filter = (dir, name) -> name.endsWith(".zip");
+    private String[] findStardistModels() throws IOException {
+        FilenameFilter filter = (dir, name) -> name.startsWith("generic");
         File[] modelList = modelsPath.listFiles(filter);
+        for (File f : modelList) {
+            if (f.exists())
+               FileUtils.deleteDirectory(f); 
+        }
+        filter = (dir, name) -> name.endsWith(".zip");
+        modelList = modelsPath.listFiles(filter);
         String[] models = new String[modelList.length];
         for (int i = 0; i < modelList.length; i++) {
             models[i] = modelList[i].getName();
@@ -247,7 +254,7 @@ public class Mito_Processing {
     /**
      * Dialog 
      */
-    public int[] dialog(String[] channels) {
+    public int[] dialog(String[] channels) throws IOException {
         String[] models = findStardistModels();
         String[] chNames = {"Nucleus", "DNA", "Mitos"};
         String dir = "";
@@ -264,7 +271,7 @@ public class Mito_Processing {
         gd.addMessage("Dots detection method", Font.getFont("Monospace"), Color.blue);
         gd.addChoice("Dots segmentation method :",dotsDetectors, dotsDetectors[0]);
         gd.addMessage("StarDist model", Font.getFont("Monospace"), Color.blue);
-        if (models.length >= 2) {
+        if (models.length > 0) {
             gd.addChoice("StarDist model :",models, models[0]);
         }
         else {
@@ -284,7 +291,7 @@ public class Mito_Processing {
             chChoices[n] = ArrayUtils.indexOf(channels, gd.getNextChoice());
         }
         dotsDetector = gd.getNextChoice();
-        if (models.length >= 2) {
+        if (models.length > 0) {
             stardistModel = modelsPath+File.separator+gd.getNextChoice();
         }
         else {

@@ -41,6 +41,7 @@ import java.util.Collections;
 import loci.plugins.BF;
 import loci.plugins.in.ImporterOptions;
 import java.awt.Rectangle;
+import java.io.FilenameFilter;
 import loci.common.Region;
 import org.apache.commons.io.FilenameUtils;
 
@@ -90,7 +91,10 @@ public class Mito_Morph implements PlugIn {
                 outDir.mkdir();
             }
             
-
+            // remove Old temp Models
+            File modelFolder = proc.modelsPath;
+            FilenameFilter filter = (dir, name) -> name.startsWith("Generic");
+    
             // Reset foreground and background
             IJ.run("Colors...", "foreground=white background=black");
             
