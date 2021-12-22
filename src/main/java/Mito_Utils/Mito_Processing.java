@@ -7,7 +7,6 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.Prefs;
 import ij.gui.Roi;
-import ij.gui.WaitForUserDialog;
 import ij.io.FileSaver;
 import ij.measure.Calibration;
 import ij.plugin.ZProjector;
@@ -18,10 +17,8 @@ import java.awt.Font;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.swing.ImageIcon;
 import loci.common.services.DependencyException;
@@ -31,6 +28,8 @@ import loci.formats.meta.IMetadata;
 import loci.plugins.util.ImageProcessorReader;
 import mcib3d.geom.Object3D;
 import mcib3d.geom.Objects3DPopulation;
+import mcib3d.geom.Objects3DPopulationColocalisation;
+import mcib3d.geom.PairColocalisation;
 import mcib3d.image3d.ImageHandler;
 import mcib3d.image3d.ImageInt;
 import mcib3d.image3d.ImageLabeller;
@@ -38,7 +37,6 @@ import mpicbg.ij.integral.RemoveOutliers;
 import net.haesleinhuepf.clij.clearcl.ClearCLBuffer;
 import net.haesleinhuepf.clij2.CLIJ2;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.tools.ant.taskdefs.WaitFor;
 import org.scijava.util.ArrayUtils;
 import sc.fiji.analyzeSkeleton.AnalyzeSkeleton_;
 import sc.fiji.analyzeSkeleton.SkeletonResult;
@@ -544,6 +542,25 @@ public class Mito_Processing {
     }
     
     /**
+     * find dna inside Mito
+     * @param dnaPop
+     * @param mitoPop
+     * @return 
+     */
+    public Objects3DPopulation findDnaInMito(Objects3DPopulation dnaPop, Objects3DPopulation mitoPop) {
+        Objects3DPopulation dnaMitoPop = new Objects3DPopulation();
+        Objects3DPopulationColocalisation coloc =  new Objects3DPopulationColocalisation(dnaPop, mitoPop);
+        ArrayList<PairColocalisation> pairColoc = coloc.getAllColocalisationPairs();
+        for (PairColocalisation p : pairColoc) {
+            int volColoc = p.getVolumeColoc();
+            if (volColoc > 0)
+                dnaMitoPop.addObject(p.getObject3D1());
+        }
+        return(dnaMitoPop);
+    }
+
+    
+    /**
     * Local compute parameters add to results file
     * @param nuc nucleus number 
     * @param mitoPop mito population
@@ -552,25 +569,32 @@ public class Mito_Processing {
     * @param results buffer
     * @throws java.io.IOException
     **/
-    public void computeParameters(int nuc, Objects3DPopulation mitoPop, ImagePlus imgMito, Objects3DPopulation dnaPop, ImagePlus imgDna, double[] mitoParams, String roi, 
+    public void computeParameters(int nuc, Objects3DPopulation mitoPop, ImagePlus imgMito, Objects3DPopulation dnaPop, ImagePlus imgDna, 
+            Objects3DPopulation dnaInMitoPop, double[] mitoParams, String roi, 
             String imgName, BufferedWriter results) throws IOException {
-        IJ.showStatus("Computing mitochondria parameters ....");
+        IJ.showStatus("Computing parameters ....");
         // mito volume
-        double mitoVol = 0, dnaVol = 0;
-        double mitoInt = 0, dnaInt = 0;
-        for (int i = 0; i < mitoPop.getNbObjects(); i++) {
+        double mitoVol = 0, dnaVol = 0, dnaInMitoVol = 0, dnaOutMitoVol = 0;
+        double mitoInt = 0, dnaInt = 0, dnaInMitoInt = 0, dnaOutMitoInt = 0;
+        int mitos = mitoPop.getNbObjects();
+        for (int i = 0; i < mitos; i++) {
             mitoVol += mitoPop.getObject(i).getVolumeUnit();
             mitoInt += mitoPop.getObject(i).getIntegratedDensity(ImageHandler.wrap(imgMito));
         }
-        double mitoVolPixels = mitoVol / (cal.pixelHeight*cal.pixelWidth*cal.pixelDepth);
-        for (int i = 0; i < dnaPop.getNbObjects(); i++) {
+        int dnas = dnaPop.getNbObjects();
+        for (int i = 0; i < dnas; i++) {
             dnaVol += dnaPop.getObject(i).getVolumeUnit();
             dnaInt += dnaPop.getObject(i).getIntegratedDensity(ImageHandler.wrap(imgDna));
         }
-        double dnaVolPixels = dnaVol / (cal.pixelHeight*cal.pixelWidth*cal.pixelDepth);
-        results.write(imgName+"\t"+roi+"\t"+nuc+"\t"+mitoPop.getNbObjects()+"\t"+mitoVol+"\t"+mitoInt/mitoVolPixels+"\t"+mitoParams[0]+"\t"+mitoParams[1]+"\t"+mitoParams[2]+"\t"+
-                mitoParams[3]+"\t"+dnaPop.getNbObjects()+"\t"+dnaVol+"\t"+dnaInt/dnaVolPixels+"\n");
+        int dnaInMito = dnaInMitoPop.getNbObjects();
+        for (int i = 0; i < dnaInMito; i++) {
+            dnaInMitoVol += dnaInMitoPop.getObject(i).getVolumeUnit();
+            dnaInMitoInt += dnaInMitoPop.getObject(i).getIntegratedDensity(ImageHandler.wrap(imgDna));
+        }
+        
+        results.write(imgName+"\t"+roi+"\t"+nuc+"\t"+mitos+"\t"+mitoVol+"\t"+mitoInt+"\t"+mitoParams[0]+"\t"+mitoParams[1]+"\t"+mitoParams[2]+"\t"+
+                mitoParams[3]+"\t"+dnas+"\t"+dnaVol+"\t"+dnaInt+"\t"+dnaInMito+"\t"+dnaInMitoVol+"\t"+dnaInMitoInt
+                +"\t"+(dnas - dnaInMito)+"\t"+Math.abs(dnaVol - dnaInMitoVol)+"\t"+Math.abs(dnaInt -dnaInMitoInt)+"\n");
         results.flush();
     }
-    
 }
