@@ -1,12 +1,14 @@
 package Mito_Utils;
 
 
+import Mito_Stardist.StarDist2D;
 import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.Prefs;
 import ij.gui.Roi;
+import ij.gui.WaitForUserDialog;
 import ij.io.FileSaver;
 import ij.measure.Calibration;
 import ij.plugin.ZProjector;
@@ -17,6 +19,7 @@ import java.awt.Font;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
@@ -55,8 +58,8 @@ import sc.fiji.analyzeSkeleton.SkeletonResult;
 public class Mito_Processing {
     
     // DNA filter size
-    private double minDNA = 0.02;
-    private double maxDNA = 5;
+    private double minDNA = 0.004;
+    private double maxDNA = 1;
     // Nucleus filter
     private double minNuc = 50;
     private double maxNuc = Double.MAX_VALUE;
@@ -68,6 +71,20 @@ public class Mito_Processing {
     public double maxDist = 5;
     private Calibration cal = new Calibration(); 
     public CLIJ2 clij2 = CLIJ2.getInstance();
+    
+    
+    public String[] dotsDetectors = {"StarDist","DOG"};
+    public String dotsDetector = "StarDist";
+    
+    // Stardist
+    public Object syncObject = new Object();
+    public final double stardistPercentileBottom = 0.2;
+    public final double stardistPercentileTop = 99.8;
+    public final double stardistProbThresh = 0.1;
+    public final double stardistOverlayThresh = 0.35;
+    public File modelsPath = new File(IJ.getDirectory("imagej")+File.separator+"models");
+    public String stardistModel = "";
+    public String stardistOutput = "Label Image"; 
     
     public final ImageIcon icon = new ImageIcon(this.getClass().getResource("/Orion_icon.png"));
     
@@ -93,6 +110,21 @@ public class Mito_Processing {
         }
         return true;
     }
+    
+    
+    /*
+    Find starDist models in Fiji models folder
+    */
+    private String[] findStardistModels() {
+        FilenameFilter filter = (dir, name) -> name.endsWith(".zip");
+        File[] modelList = modelsPath.listFiles(filter);
+        String[] models = new String[modelList.length];
+        for (int i = 0; i < modelList.length; i++) {
+            models[i] = modelList[i].getName();
+        }
+        return(models);
+    }
+    
     
     /**
      * Find images in folder
@@ -216,6 +248,7 @@ public class Mito_Processing {
      * Dialog 
      */
     public int[] dialog(String[] channels) {
+        String[] models = findStardistModels();
         String[] chNames = {"Nucleus", "DNA", "Mitos"};
         String dir = "";
         GenericDialogPlus gd = new GenericDialogPlus("Parameters");
@@ -228,6 +261,16 @@ public class Mito_Processing {
             index++;
         }
         gd.addMessage("DNA parameters", Font.getFont("Monospace"), Color.blue);
+        gd.addMessage("Dots detection method", Font.getFont("Monospace"), Color.blue);
+        gd.addChoice("Dots segmentation method :",dotsDetectors, dotsDetectors[0]);
+        gd.addMessage("StarDist model", Font.getFont("Monospace"), Color.blue);
+        if (models.length >= 2) {
+            gd.addChoice("StarDist model :",models, models[0]);
+        }
+        else {
+            gd.addMessage("No StarDist model found in Fiji !!", Font.getFont("Monospace"), Color.red);
+            gd.addFileField("StarDist model :", stardistModel);
+        }
         gd.addNumericField("Min DNA size (µm3) : ", minDNA, 3);
         gd.addNumericField("Max DNA size (µm3) : ", maxDNA, 3);
         gd.addMessage("Image calibration", Font.getFont("Monospace"), Color.blue);
@@ -239,6 +282,17 @@ public class Mito_Processing {
         int[] chChoices = new int[channels.length];
         for (int n = 0; n < chChoices.length; n++) {
             chChoices[n] = ArrayUtils.indexOf(channels, gd.getNextChoice());
+        }
+        dotsDetector = gd.getNextChoice();
+        if (models.length >= 2) {
+            stardistModel = modelsPath+File.separator+gd.getNextChoice();
+        }
+        else {
+            stardistModel = gd.getNextString();
+        }
+        if (dotsDetector.equals("StarDist") && stardistModel.isEmpty()) {
+            IJ.error("No model specify !!");
+            return(null);
         }
         minDNA = gd.getNextNumber();
         maxDNA = gd.getNextNumber();
@@ -382,11 +436,30 @@ public class Mito_Processing {
         imgBin.setCalibration(cal);
         clearOutSide(imgBin, roi);
         nucPop.draw(imgBin.getImageStack(), 0);
-        Objects3DPopulation pop = new Objects3DPopulation(ImageHandler.wrap(imgBin));
+        Objects3DPopulation dnaPop = new Objects3DPopulation(getPopFromImage(imgBin).getObjectsWithinVolume(minDNA, maxDNA, true));
         flush_close(imgBin);
-        Objects3DPopulation dnaPop = new Objects3DPopulation(pop.getObjectsWithinVolume(minDNA, maxDNA, true));
         return(dnaPop);
     }
+    
+    /**
+     * Find gene population with Stardist
+     */
+    public Objects3DPopulation stardistDnaPop(ImagePlus img, Roi roi, Objects3DPopulation nucPop) throws IOException{
+        // Go StarDist
+        File starDistModelFile = new File(stardistModel);
+        StarDist2D star = new StarDist2D(syncObject, starDistModelFile);
+        star.loadInput(img);
+        star.setParams(stardistPercentileBottom, stardistPercentileTop, stardistProbThresh, stardistOverlayThresh, stardistOutput);
+        star.run();
+        // label in 3D
+        ImagePlus imgLab = star.getLabelImagePlus().duplicate();
+        imgLab.setCalibration(cal);
+        clearOutSide(imgLab, roi);
+        nucPop.draw(imgLab.getImageStack(), 0);
+        Objects3DPopulation dnaPop = new Objects3DPopulation(getPopFromImage(imgLab).getObjectsWithinVolume(minDNA, maxDNA, true));
+        flush_close(imgLab);
+        return(dnaPop);
+        }
     
     
     public Objects3DPopulation getPopFromImage(ImagePlus img) {
@@ -535,7 +608,7 @@ public class Mito_Processing {
         }
         double[] skeletonParams = {branches, branchLength, endPoint, junction};
         FileSaver imgSave = new FileSaver(imgLabProj);
-        imgSave.saveAsTiff(outFileName+"_"+roi.getName()+"_LabelledSkel.tif");
+        imgSave.saveAsTiff(outFileName+"_Roi-"+roi.getName()+"_LabelledSkel.tif");
         flush_close(imgLabProj); 
         flush_close(imgBin);
         return(skeletonParams);
@@ -556,6 +629,7 @@ public class Mito_Processing {
             if (volColoc > 0)
                 dnaMitoPop.addObject(p.getObject3D1());
         }
+        dnaMitoPop.setCalibration(cal.pixelWidth, cal.pixelDepth, cal.getUnit());
         return(dnaMitoPop);
     }
 
@@ -574,8 +648,8 @@ public class Mito_Processing {
             String imgName, BufferedWriter results) throws IOException {
         IJ.showStatus("Computing parameters ....");
         // mito volume
-        double mitoVol = 0, dnaVol = 0, dnaInMitoVol = 0, dnaOutMitoVol = 0;
-        double mitoInt = 0, dnaInt = 0, dnaInMitoInt = 0, dnaOutMitoInt = 0;
+        double mitoVol = 0, dnaVol = 0, dnaInMitoVol = 0;
+        double mitoInt = 0, dnaInt = 0, dnaInMitoInt = 0;
         int mitos = mitoPop.getNbObjects();
         for (int i = 0; i < mitos; i++) {
             mitoVol += mitoPop.getObject(i).getVolumeUnit();
@@ -594,7 +668,7 @@ public class Mito_Processing {
         
         results.write(imgName+"\t"+roi+"\t"+nuc+"\t"+mitos+"\t"+mitoVol+"\t"+mitoInt+"\t"+mitoParams[0]+"\t"+mitoParams[1]+"\t"+mitoParams[2]+"\t"+
                 mitoParams[3]+"\t"+dnas+"\t"+dnaVol+"\t"+dnaInt+"\t"+dnaInMito+"\t"+dnaInMitoVol+"\t"+dnaInMitoInt
-                +"\t"+(dnas - dnaInMito)+"\t"+Math.abs(dnaVol - dnaInMitoVol)+"\t"+Math.abs(dnaInt -dnaInMitoInt)+"\n");
+                +"\t"+(dnas - dnaInMito)+"\t"+(dnaVol - dnaInMitoVol)+"\t"+(dnaInt -dnaInMitoInt)+"\n");
         results.flush();
     }
 }

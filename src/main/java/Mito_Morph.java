@@ -89,15 +89,7 @@ public class Mito_Morph implements PlugIn {
             if (!Files.exists(Paths.get(outDirResults))) {
                 outDir.mkdir();
             }
-            /*
-            * Write headers results for results file
-            */
-            // Global file for mito results
-            String resultsName = "GlobalResults.xls";
-            String header = "ImageName\tRoi\tNucleus number\tMito number\tMito volume\tMito intensity\tMito branch number\tMito branch length\t"
-                    + "Mito end points\tMito junction number\tTotal DNA number\tTotal DNA volume\tTotal DNA mean intensity\tDNA in mito number\tDNA in mito volume"
-                    + "\tDNA in mito mean intensity\tDNA out Mito number\tDNA out Mito volume\tDNA out mito mean intensity\n";
-            outPutGlobalResults = proc.writeHeaders(outDirResults+resultsName, header); 
+            
 
             // Reset foreground and background
             IJ.run("Colors...", "foreground=white background=black");
@@ -118,6 +110,15 @@ public class Mito_Morph implements PlugIn {
             cal = proc.getCalib();
             if (channelIndex == null)
                 return;
+            /*
+            * Write headers results for results file
+            */
+            // Global file for mito results
+            String resultsName = "GlobalResults-"+proc.dotsDetector+".xls";
+            String header = "ImageName\tRoi\tNucleus number\tMito number\tMito volume\tMito intensity\tMito branch number\tMito branch length\t"
+                    + "Mito end points\tMito junction number\tTotal DNA number\tTotal DNA volume\tTotal DNA mean intensity\tDNA in mito number\tDNA in mito volume"
+                    + "\tDNA in mito mean intensity\tDNA out Mito number\tDNA out Mito volume\tDNA out mito mean intensity\n";
+            outPutGlobalResults = proc.writeHeaders(outDirResults+resultsName, header); 
             for (String f : imageFiles) {
                 String rootName = FilenameUtils.getBaseName(f);
                 reader.setId(f);
@@ -183,7 +184,11 @@ public class Mito_Morph implements PlugIn {
                         options.setCEnd(s, dnaCh);System.out.println("Opening dna channel");
                         ImagePlus imgDnaOrg = BF.openImagePlus(options)[0];
                          // Find Dna
-                        Objects3DPopulation dnaPop = proc.find_DNA(imgDnaOrg, roi, nucPop);
+                        Objects3DPopulation dnaPop = new Objects3DPopulation();
+                        if (!proc.dotsDetector.equals("StarDist"))
+                            dnaPop = proc.find_DNA(imgDnaOrg, roi, nucPop);
+                        else
+                            dnaPop = proc.stardistDnaPop(imgDnaOrg, roi, nucPop);
                         System.out.println("DNA pop = "+ dnaPop.getNbObjects());                        
                         
                         // Mito channel
@@ -203,9 +208,11 @@ public class Mito_Morph implements PlugIn {
                         double[] skeletonParams = proc.analyzeSkeleton(imgMitoOrg, roi, mitoPop, outDirResults+rootName);
                         // Compute global parameters                        
                         IJ.showStatus("Writing parameters ...");
-                        proc.computeParameters(nucPop.getNbObjects(), mitoPop, imgMitoOrg, dnaPop, imgDnaOrg, dnaInMitoPop, skeletonParams, roiName, rootName+seriesName, outPutGlobalResults);
+                        proc.computeParameters(nucPop.getNbObjects(), mitoPop, imgMitoOrg, dnaPop, imgDnaOrg, dnaInMitoPop, skeletonParams, roiName, rootName, outPutGlobalResults);
                         proc.flush_close(imgMitoOrg);
                         proc.flush_close(imgDnaOrg);
+                        
+                        
                         // Save objects image
                         ImageHandler imhMitoObjects = ImageHandler.wrap(imgNucOrg).createSameDimensions();
                         ImageHandler imhNucObjects = imhMitoObjects.duplicate();
@@ -218,7 +225,7 @@ public class Mito_Morph implements PlugIn {
                         imgObjects.setCalibration(cal);
                         IJ.run(imgObjects, "Enhance Contrast", "saturated=0.35");
                         FileSaver ImgObjectsFile = new FileSaver(imgObjects);
-                        ImgObjectsFile.saveAsTiff(outDirResults + rootName + "_" + seriesName + "Roi_"+(r+1)+"_Objects.tif");
+                        ImgObjectsFile.saveAsTiff(outDirResults + rootName + "_Roi-"+roiName+"_Objects-"+proc.dotsDetector+".tif");
                         proc.flush_close(imgObjects);
                         proc.flush_close(imhMitoObjects.getImagePlus());
                         proc.flush_close(imhNucObjects.getImagePlus());
